@@ -186,9 +186,9 @@ pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks
 
-./results/
+results/
 # ./data/
 ./checkpoints/
 # ./processed_data/
 *.tar.gz
-./eval_outputs/
+eval_outputs/
