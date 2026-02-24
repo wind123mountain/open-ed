@@ -60,16 +60,14 @@ def get_teacher_model(args, device):
             model = AutoModelForCausalLM.from_pretrained(args.teacher_model_path, config=config, device_map={"": device}, torch_dtype=torch.float32)
             model = model.half()
         
-        if args.peft is not None and args.teacher_peft_path is not None:
-            if args.peft == "lora":
-                model = PeftModel.from_pretrained(model, args.teacher_peft_path)
-                model = model.merge_and_unload()
-            else:
-                raise NotImplementedError
-        else:
-            if dist.get_rank() == 0:
-                print(' > number of parameters: {}'.format(
-                    sum([p.nelement() for p in model.parameters()])), flush=True)
+        if args.teacher_peft_path is not None:
+            model = PeftModel.from_pretrained(model, args.teacher_peft_path)
+            model = model.merge_and_unload()
+            print("merge_and_unload")
+
+        if dist.get_rank() == 0:
+            print(' > number of parameters: {}'.format(
+                sum([p.nelement() for p in model.parameters()])), flush=True)
 
     model.eval()
     
@@ -457,7 +455,7 @@ def evaluate(args, tokenizer, model, dataset: LMTrainDataset, split, epoch, devi
         repetition_penalty=args.repetition_penalty,
         max_length=args.max_length,
         min_length=None,
-        eos_token_id=tokenizer.eos_token_id,
+        eos_token_id=[tokenizer.eos_token_id, 151643],
         pad_token_id=tokenizer.eos_token_id,
         return_dict_in_generate=True,
         output_scores=False

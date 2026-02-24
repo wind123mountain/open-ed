@@ -159,6 +159,8 @@ def get_model(args, device):
                         lora_alpha=args.peft_lora_alpha, 
                         lora_dropout=args.peft_lora_dropout,
                         target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+                        # # target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+                        # target_modules = ["q_proj", "v_proj", "o_proj", "up_proj", "down_proj"]
                     )
                     model = get_peft_model(model, peft_config)
                 model.print_trainable_parameters()
@@ -209,7 +211,13 @@ def get_optimizer_params_peft(args, model: nn.Module):
 
 def get_tokenizer(args):
     tokenizer = AutoTokenizer.from_pretrained(args.model_path, padding_side="right")
+
+    if args.model_type == "qwen":
+        tokenizer.eos_token_id = 151645 
     tokenizer.pad_token_id = tokenizer.eos_token_id
+    tokenizer.pad_token = tokenizer.eos_token
+    # print(tokenizer.eos_token_id)
+
     
     return tokenizer
 

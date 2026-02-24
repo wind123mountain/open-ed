@@ -4,7 +4,7 @@ SEED=42
 
 # ==== Định nghĩa các biến ====
 BASE_PATH=.
-MODEL_PATH="results/qwen3/sft_0.6B/e10-bs8-lr5e-05-G2-N2-NN1/980"
+MODEL_PATH="results/qwen3/sft_0.6B_ed/e5-bs4-lr5e-05-G4-N2-NN1/4410"
 OUTPUT_DIR="${BASE_PATH}/eval_outputs/${MODEL_PATH}"
 
 
@@ -12,7 +12,8 @@ mkdir -p ${OUTPUT_DIR}
 
 OPTS=""
 
-# training
+# OPTS+=" --data_dir processed_data/qwen/"
+# OPTS+=" --dataset_name in_domain"
 OPTS+=" --val_batch_size 64"
 
 # devices

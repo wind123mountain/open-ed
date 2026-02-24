@@ -22,6 +22,8 @@ def main():
     parser.add_argument("--output_dir", type=str, default=None)
     parser.add_argument("--val_batch_size", type=int, default=64)
     parser.add_argument("--model_type", type=str, default="qwen")
+    parser.add_argument("--data_dir", type=str, default='processed_data/ace/qwen/')
+    parser.add_argument("--dataset_name", type=str, default='ace')
 
     args = parser.parse_args()
 
@@ -53,16 +55,31 @@ def main():
 
     with torch.cuda.amp.autocast(dtype=dtype):
         metrics, responses = evaluator.evaluate_benchmark_dataset(
-            data_dir='processed_data/ace/qwen/',
-            dataset_name='ACE',            
+            data_dir=args.data_dir,
+            dataset_name=args.dataset_name,            
             batch_size=args.val_batch_size, 
-            max_length=1024, max_prompt_length=512
+            max_length=1024, max_prompt_length=512, split="test"
         )
 
-    with open(args.output_dir + "/ace_eval.json", "w", encoding="utf-8") as f:
+    with open(args.output_dir + f"/{args.dataset_name}_eval.json", "w", encoding="utf-8") as f:
         json.dump(metrics, f, ensure_ascii=False, indent=4)
     
-    with open(args.output_dir + "/ace_answers.jsonl", "w") as f:
+    with open(args.output_dir + f"/{args.dataset_name}_answers.jsonl", "w") as f:
+        for resp in responses:
+            f.write(json.dumps({"text": resp}) + "\n")
+
+    with torch.cuda.amp.autocast(dtype=dtype):
+        metrics, responses = evaluator.evaluate_benchmark_dataset(
+            data_dir=args.data_dir,
+            dataset_name=args.dataset_name,            
+            batch_size=args.val_batch_size, 
+            max_length=1024, max_prompt_length=512, split="valid"
+        )
+
+    with open(args.output_dir + f"/{args.dataset_name}_valid_eval.json", "w", encoding="utf-8") as f:
+        json.dump(metrics, f, ensure_ascii=False, indent=4)
+    
+    with open(args.output_dir + f"/{args.dataset_name}_valid_answers.jsonl", "w") as f:
         for resp in responses:
             f.write(json.dumps({"text": resp}) + "\n")
     

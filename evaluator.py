@@ -57,9 +57,9 @@ class Evaluator:
         collate_fn = dataset.collate
 
         generation_config = GenerationConfig(
-            do_sample=False,
+            do_sample=True,
             top_p=0.95,
-            temperature=0.0,            
+            temperature=0.7,            
             max_length=max_length,
             min_length=None,
             eos_token_id=self.tokenizer.eos_token_id,
@@ -120,7 +120,8 @@ class Evaluator:
         dataset_name: str,
         batch_size: int = 10,
         max_length: int = 1024,
-        max_prompt_length: int = 512
+        max_prompt_length: int = 512,
+        split: str = "test",
     ):
         set_seed(self.seeds[0])
 
@@ -128,7 +129,7 @@ class Evaluator:
         self.args.max_prompt_length = max_prompt_length
         
         rng_sample = random.Random(self.seeds[0])
-        test_dataset = LMEvalDataset(self.args, self.tokenizer, data_dir, "test", rng_sample)
+        test_dataset = LMEvalDataset(self.args, self.tokenizer, data_dir, split, rng_sample)
 
         metrics, responses = self.evaluate(test_dataset, batch_size, max_length)
         print(dataset_name, ": ", metrics)
