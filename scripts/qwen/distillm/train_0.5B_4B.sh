@@ -18,22 +18,22 @@ DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE \
 # model
 BASE_PATH=.
 CKPT_NAME="qwen2.5-0.5B"
-CKPT="results/qwen2.5/distillm_0.5B_4B_on_srkl/81"
+CKPT="Qwen/Qwen2.5-0.5B"
 
 TEACHER_CKPT_NAME="qwen3-4B"
 TEACHER_CKPT="Qwen/Qwen3-4B-Instruct-2507"
 # data
-DATA_DIR="${BASE_PATH}/processed_data/ace/0/qwen/"
+DATA_DIR="${BASE_PATH}/processed_data/geneva/qwen/"
 # hp
 BATCH_SIZE=2
 LR=0.00005
 GRAD_ACC=8
 EVAL_BATCH_SIZE=32
-EPOCHS=3
+EPOCHS=5
 # length
 MAX_LENGTH=768
 # runtime
-SAVE_PATH="${BASE_PATH}/results/qwen2.5/distillm_0.5B_4B_on_srkl"
+SAVE_PATH="${BASE_PATH}/results/qwen2.5/distillm_0.5B_4B_geneva"
 # seed
 SEED=42
 
@@ -82,7 +82,7 @@ OPTS+=" --seed ${SEED}"
 OPTS+=" --deepspeed"
 OPTS+=" --deepspeed_config ${BASE_PATH}/configs/deepspeed/ds_config_bf16.json"
 # type
-OPTS+=" --type srkl"
+OPTS+=" --type sfkl"
 # gen
 OPTS+=" --do-sample"
 OPTS+=" --top-k 0"

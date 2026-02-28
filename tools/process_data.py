@@ -24,23 +24,40 @@ class Encoder(object):
         response = line["response"]
         system_prompt = line["system_prompt"]
         user_prompt = line["user_prompt"]
+        t_system_prompt = line.get("t_system_prompt")
+        t_user_prompt = line.get("t_user_prompt")
 
         prompt = Encoder.tokenizer.apply_chat_template(
             [{"role": "system", "content": system_prompt},
              {"role": "user", "content": user_prompt}],
              add_generation_prompt=True, tokenize=False, enable_thinking=False 
         )
+
+        t_prompt = None
+        if t_system_prompt is not None and t_user_prompt is not None:
+            t_prompt = Encoder.tokenizer.apply_chat_template(
+                [{"role": "system", "content": t_system_prompt},
+                 {"role": "user", "content": t_user_prompt}],
+                 add_generation_prompt=True, tokenize=False, enable_thinking=False 
+            )
         
         
         prompt_tokens = Encoder.tokenizer.encode(prompt, add_special_tokens=False)
         full_tokens = Encoder.tokenizer.encode(prompt + response, add_special_tokens=False) + [Encoder.tokenizer.eos_token_id]
         response_tokens = full_tokens[len(prompt_tokens):]
+
+        t_prompt_tokens = None
+        if t_prompt is not None:
+            t_prompt_tokens = Encoder.tokenizer.encode(t_prompt, add_special_tokens=False)
+            if len(t_prompt_tokens) > self.args.t_max_prompt_length:
+                t_prompt_tokens = t_prompt_tokens[:self.args.t_max_prompt_length]
+
         
         if len(prompt_tokens) > self.args.max_prompt_length:
             prompt_tokens = prompt_tokens[:self.args.max_prompt_length]
             # return None, None, None, None, len(line)
         
-        return line, prompt, prompt_tokens, response_tokens, len(line)
+        return line, prompt, prompt_tokens, response_tokens, t_prompt_tokens, len(line)
 
 
 def main():
@@ -80,6 +97,11 @@ def main():
         bin_file = os.path.join(args.processed_data_dir, f"{split}_{0}.bin")
         idx_file = os.path.join(args.processed_data_dir, f"{split}_{0}.idx")
 
+        t_binary_builder = None
+        if split == "train":
+            t_bin_file = os.path.join(args.processed_data_dir, f"teacher_train_0.bin")
+            t_idx_file = os.path.join(args.processed_data_dir, f"teacher_train_0.idx")
+                    
         if args.model_type!="qwen":
             binary_builder = make_builder(bin_file, impl="mmap", dtype=np.uint16)
         else:
@@ -94,7 +116,7 @@ def main():
         
         json_file = open(os.path.join(args.processed_data_dir, f"{split}.jsonl"), "w")
         
-        for lid, (line, prompt_str, prompt, response, bytes_processed) in enumerate(encoded_docs):
+        for lid, (line, prompt_str, prompt, response, t_prompt, bytes_processed) in enumerate(encoded_docs):
             total_bytes_processed += bytes_processed
             if prompt is None:
                 continue
@@ -105,6 +127,14 @@ def main():
                 else:
                     continue
             else:
+                if t_prompt is not None and split == "train":
+                    if t_binary_builder is None:
+                        if args.model_type!="qwen":
+                            t_binary_builder = make_builder(t_bin_file, impl="mmap", dtype=np.uint16)
+                        else:
+                            t_binary_builder = make_builder(t_bin_file, impl="mmap", dtype=np.uint32)
+                    t_binary_builder.add_item(torch.IntTensor(t_prompt + [-1] + response))
+                
                 binary_builder.add_item(torch.IntTensor(prompt + [-1] + response))
 
             json_file.write(json.dumps({
@@ -126,6 +156,8 @@ def main():
 
         # finish compressing tokenized data into `bin_file`, and generate meta information into `idx_file`
         binary_builder.finalize(idx_file)
+        if t_binary_builder is not None:
+            t_binary_builder.finalize(t_idx_file)
 
         # close multiproceessing mapping
         pool.close()

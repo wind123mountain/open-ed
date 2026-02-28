@@ -31,7 +31,7 @@ EPOCHS=5
 # length
 MAX_LENGTH=768
 # runtime
-SAVE_PATH="${BASE_PATH}/results/qwen3/sft_0.6B_ed_lora"
+SAVE_PATH="${BASE_PATH}/results/qwen3/sft_0.6B_maven_lora"
 # seed
 SEED=42
 

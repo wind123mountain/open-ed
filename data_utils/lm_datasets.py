@@ -23,6 +23,10 @@ class LMTrainDataset(Dataset):
         self.max_prompt_length = args.max_prompt_length
         self.rng_sample = rng_sample
         self.lm_ctx = DistributedMMapIndexedDataset(path, f"{split}", get_rank(), get_world_size())
+        self.t_lm_ctx = None
+
+        if os.path.exists(os.path.join(path, f"teacher_train_0.bin")) and split == "train":
+            self.t_lm_ctx = DistributedMMapIndexedDataset(path, f"teacher_train", get_rank(), get_world_size())
 
         if os.path.exists(os.path.join(path, f"{split}.jsonl")):
             with open(os.path.join(path, f"{split}.jsonl")) as f:
@@ -46,8 +50,15 @@ class LMTrainDataset(Dataset):
     def _get_lm(self, index):
         data = self.lm_ctx[index]
         input_ids = data.astype(int)
+
+        t_input_ids = None
+        if self.t_lm_ctx is not None:
+            t_data = self.t_lm_ctx[index]
+            t_input_ids = t_data.astype(int)
+
         return {
-            "input_ids": input_ids
+            "input_ids": input_ids,
+            "t_input_ids": t_input_ids
         }
 
     def _process_lm(self, i, samp, model_data, no_model_data, gen_data):
@@ -72,10 +83,11 @@ class LMTrainDataset(Dataset):
             model_data["position_ids"][i][:input_len-1] = torch.arange(0, input_len-1, dtype=torch.long)
         no_model_data["label"][i][:input_len-1] = torch.tensor(input_ids[1:], dtype=torch.long)
         no_model_data["label"][i][:source_len-1] = -100
-        no_model_data["loss_mask"][i][:input_len-1] = 1.0
-        no_model_data["loss_mask"][i][:source_len-1] = 0
+        if "loss_mask" in no_model_data:
+            no_model_data["loss_mask"][i][:input_len-1] = 1.0
+            no_model_data["loss_mask"][i][:source_len-1] = 0
         
-        if prompt is not None:
+        if prompt is not None and gen_data is not None:
             gen_data["input_ids"][i][-len(prompt):] = torch.tensor(prompt, dtype=torch.long)
             gen_data["attention_mask"][i][-len(prompt):] = 1.0
 
@@ -86,8 +98,9 @@ class LMTrainDataset(Dataset):
         for k in no_model_data:
             no_model_data[k] = no_model_data[k].to(device)
 
-        for k in gen_data:
-            gen_data[k] = gen_data[k].to(device)
+        if gen_data is not None:
+            for k in gen_data:
+                gen_data[k] = gen_data[k].to(device)
 
         return model_data, no_model_data, gen_data
 
@@ -116,8 +129,25 @@ class LMTrainDataset(Dataset):
 
         for i, samp in enumerate(samples):
             self._process_lm(i, samp, model_data, no_model_data, gen_data)
+
+        t_model_data, t_no_model_data = None, None
+        if samples[0]["t_input_ids"] is not None:
+            t_model_data = {
+                "input_ids": torch.ones(bs, self.args.t_max_length, dtype=torch.long) * self.pad_id,
+                "attention_mask": torch.zeros(bs, self.args.t_max_length),
+            }
+            
+            if self.args.model_type in ["gpt2"]:
+                t_model_data["position_ids"] = torch.zeros(bs, self.args.t_max_length, dtype=torch.long)
+                
+            t_no_model_data = {
+                "label": torch.ones(bs, self.args.t_max_length, dtype=torch.long) * -100,
+            }
+
+            for i, samp in enumerate(samples):
+                self._process_lm(i, {"input_ids": samp["t_input_ids"]}, t_model_data, t_no_model_data, None)
         
-        return model_data, no_model_data, gen_data
+        return model_data, no_model_data, gen_data, t_model_data, t_no_model_data
 
 
 class LMEvalDataset(Dataset):

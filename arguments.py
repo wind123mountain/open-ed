@@ -82,6 +82,7 @@ def add_data_args(parser: argparse.ArgumentParser):
     group.add_argument("--prompt-type", type=str, default=None)
     group.add_argument("--num-workers", type=int, default=1)
     group.add_argument("--max-prompt-length", type=int, default=512)
+    group.add_argument("--t-max-prompt-length", type=int, default=640)
     group.add_argument("--min-prompt-length", type=int, default=128)
     group.add_argument("--json-data", action="store_true")
     group.add_argument("--bin-data", action="store_true")
@@ -110,6 +111,8 @@ def add_hp_args(parser: argparse.ArgumentParser):
     group.add_argument('--train-iters-per-epoch', type=int, default=-1,
                        help='total number of iterations per epoch')
     group.add_argument('--max-length', type=int, default=1024,
+                       help='max length of input')
+    group.add_argument('--t-max-length', type=int, default=1024,
                        help='max length of input')
     group.add_argument('--seed', type=int, default=1234,
                        help='random seed for reproducibility')

@@ -275,7 +275,7 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
         sampler.set_epoch(epoch)
 
         model.train()
-        for it, (model_batch, no_model_batch, gen_data) in enumerate(train_dataloader):
+        for it, (model_batch, no_model_batch, gen_data, _, _) in enumerate(train_dataloader):
             dataset["train"].move_to_device(model_batch, no_model_batch, gen_data, device)
             
             if args.lm_data_dir is not None:
@@ -472,7 +472,7 @@ def evaluate(args, tokenizer, model, dataset: LMTrainDataset, split, epoch, devi
     all_response_ids = []
     
     with torch.no_grad():
-        for it, (model_batch, no_model_batch, gen_data) in enumerate(tqdm(dataloader, desc="Evaluating", disable=(dist.get_rank() != 0))):
+        for it, (model_batch, no_model_batch, gen_data, _, _) in enumerate(tqdm(dataloader, desc="Evaluating", disable=(dist.get_rank() != 0))):
             print_rank(f"{it}/{len(dataloader)}")
             dataset.move_to_device(model_batch, no_model_batch, gen_data, device)
             logits = model(**model_batch).logits
