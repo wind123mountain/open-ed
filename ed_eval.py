@@ -1,5 +1,5 @@
 import json
-from collections import Counter
+from collections import Counter, defaultdict
 
 def normalize(text):
     return text.strip().lower()
@@ -69,11 +69,58 @@ def compute_f1(counts):
     return precision, recall, f1
 
 
+# def ed_evaluate(pred_list, gt_list):
+#     trigger_counts = {"tp": 0, "fp": 0, "fn": 0}
+#     argument_counts = {"tp": 0, "fp": 0, "fn": 0}
+#     trigger_text_counts = {"tp": 0, "fp": 0, "fn": 0}
+
+
+#     for pred_json, gt_json in zip(pred_list, gt_list):
+#         pred = safe_load(pred_json)
+#         gt = safe_load(gt_json[0])
+
+#         pred_triggers, pred_trigger_texts = extract_triggers(pred)
+#         gt_triggers, gt_trigger_texts = extract_triggers(gt)
+
+#         pred_args = extract_arguments(pred)
+#         gt_args = extract_arguments(gt)
+
+#         update_counts(pred_triggers, gt_triggers, trigger_counts)
+#         update_counts(pred_args, gt_args, argument_counts)
+#         update_counts(pred_trigger_texts, gt_trigger_texts, trigger_text_counts)
+
+
+#     trigger_metrics = compute_f1(trigger_counts)
+#     argument_metrics = compute_f1(argument_counts)
+#     trigger_text_metrics = compute_f1(trigger_text_counts)
+
+#     return {
+#         "trigger_counts": trigger_counts,
+#         "argument_counts": argument_counts,
+#         "trigger_text": {
+#             "precision": trigger_text_metrics[0],
+#             "recall": trigger_text_metrics[1],
+#             "f1": trigger_text_metrics[2],
+#         },
+#         "trigger": {
+#             "precision": trigger_metrics[0],
+#             "recall": trigger_metrics[1],
+#             "f1": trigger_metrics[2],
+#         },
+#         "argument": {
+#             "precision": argument_metrics[0],
+#             "recall": argument_metrics[1],
+#             "f1": argument_metrics[2],
+#         }
+#     }
 def ed_evaluate(pred_list, gt_list):
     trigger_counts = {"tp": 0, "fp": 0, "fn": 0}
     argument_counts = {"tp": 0, "fp": 0, "fn": 0}
     trigger_text_counts = {"tp": 0, "fp": 0, "fn": 0}
-
+    
+    trigger_type_counts = defaultdict(lambda: {"tp": 0, "fp": 0, "fn": 0})
+    
+    global_gt_types = set()
 
     for pred_json, gt_json in zip(pred_list, gt_list):
         pred = safe_load(pred_json)
@@ -82,6 +129,9 @@ def ed_evaluate(pred_list, gt_list):
         pred_triggers, pred_trigger_texts = extract_triggers(pred)
         gt_triggers, gt_trigger_texts = extract_triggers(gt)
 
+        for t in gt_triggers:
+            global_gt_types.add(t[1])
+
         pred_args = extract_arguments(pred)
         gt_args = extract_arguments(gt)
 
@@ -89,10 +139,29 @@ def ed_evaluate(pred_list, gt_list):
         update_counts(pred_args, gt_args, argument_counts)
         update_counts(pred_trigger_texts, gt_trigger_texts, trigger_text_counts)
 
+        all_types_in_doc = set([t[1] for t in pred_triggers] + [t[1] for t in gt_triggers])
+        
+        for e_type in all_types_in_doc:
+            pred_triggers_by_type = [t for t in pred_triggers if t[1] == e_type]
+            gt_triggers_by_type = [t for t in gt_triggers if t[1] == e_type]
+            
+            update_counts(pred_triggers_by_type, gt_triggers_by_type, trigger_type_counts[e_type])
 
     trigger_metrics = compute_f1(trigger_counts)
     argument_metrics = compute_f1(argument_counts)
     trigger_text_metrics = compute_f1(trigger_text_counts)
+
+    trigger_per_type_metrics = {}
+    
+    for e_type, counts in trigger_type_counts.items():
+        if e_type in global_gt_types:
+            precision, recall, f1 = compute_f1(counts)
+            trigger_per_type_metrics[e_type] = {
+                "counts": dict(counts),
+                "precision": precision,
+                "recall": recall,
+                "f1": f1
+            }
 
     return {
         "trigger_counts": trigger_counts,
@@ -106,10 +175,11 @@ def ed_evaluate(pred_list, gt_list):
             "precision": trigger_metrics[0],
             "recall": trigger_metrics[1],
             "f1": trigger_metrics[2],
-        },
+        },        
         "argument": {
             "precision": argument_metrics[0],
             "recall": argument_metrics[1],
             "f1": argument_metrics[2],
-        }
+        },
+        "trigger_per_type": trigger_per_type_metrics,
     }
