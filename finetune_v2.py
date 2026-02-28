@@ -152,10 +152,8 @@ def prepare_dataset(args, tokenizer):
         data["train"] = LMTrainDataset(args, tokenizer, args.data_dir, "train", args.train_num, args.train_ratio, rng_sample)
         print_rank("train num", len(data["train"]))
         data["dev"] = LMTrainDataset(args, tokenizer, args.data_dir, "valid", args.dev_num, args.dev_ratio, rng_sample)
-    elif args.do_eval:
-        data["test"] = LMTrainDataset(args, tokenizer, args.data_dir, "valid", args.dev_num, args.dev_ratio, rng_sample)
-    else:
-        raise ValueError("Do train and do eval must set one")
+    if args.do_eval:
+        data["test"] = LMTrainDataset(args, tokenizer, args.data_dir, "test", args.dev_num, args.dev_ratio, rng_sample)
         
     # pre-trained dataset
     if args.do_train and args.lm_data_dir is not None:
@@ -427,6 +425,10 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
             # Evaluation
             if args.eval_interval and global_step % args.eval_interval == 0 and step % args.gradient_accumulation_steps == 0:
                 curr_avg_loss = evaluate(args, tokenizer, model, dataset["dev"], "dev", epoch, device, adaptive_threshold)
+
+                if args.do_eval:
+                    evaluate(args, tokenizer, model, dataset["test"], "test", epoch, device)
+
                 if "adaptive" in args.type:
                     if curr_avg_loss >= prev_avg_loss + args.loss_eps:
                         adaptive_threshold += 0.1
@@ -624,8 +626,8 @@ def main():
     if args.do_train:
         model = finetune(args, tokenizer, model, optimizer, lr_scheduler, dataset, device, teacher_model=teacher_model)
    
-    if args.do_eval:
-        evaluate(args, tokenizer, model, dataset["test"], "test", 0, device)
+    # if args.do_eval:
+    #     evaluate(args, tokenizer, model, dataset["test"], "test", 0, device)
         
     
 if __name__ == "__main__":
