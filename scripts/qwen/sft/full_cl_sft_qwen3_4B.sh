@@ -33,16 +33,8 @@ RUN_NAME="e${EPOCHS}-bs${BATCH_SIZE}-lr${LR}-G${GRAD_ACC}-N${GPUS_PER_NODE}-NN${
 # Set to an existing checkpoint path to resume from a prior SFT instead.
 CURRENT_PEFT_PATH=""
 
-# Experience Replay settings
-ER_COEF=0.5          # weight of replay CE loss; set to 0 to disable
-ER_STORE_PROB=0.1    # fraction of training batches stored in the replay buffer
-CURRENT_ER_BUFFER=""  # populated automatically after each task
-
 # CL distillation settings
-CL_DISTILL_COEF=0.5  # >0 enables CL distillation; actual weighting uses class-count formula
-CL_DISTILL_TEMP=2.0  # temperature for soft targets
-CL_TRANSFER_TOP_K=128  # top-k logits cached per token for Loss_Transfer
-CL_CACHE_BATCH_SIZE=4  # mini-batch size for pre-computing cached old-model logits
+CL_DISTILL_COEF=0.5  # >0 enables CL distillation from frozen old-model snapshot
 
 NUM_TASKS=5
 START_TASK=0  # Change to resume from a later task (e.g. 1 if task 0 is done)
@@ -114,20 +106,9 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
     if [ -n "${CURRENT_PEFT_PATH}" ]; then
         OPTS+=" --peft-path ${CURRENT_PEFT_PATH}"
     fi
-    # experience replay
-    ER_BUFFER_SAVE_PATH="${SAVE_PATH}/${RUN_NAME}/er_buffer_task${TASK_ID}.pkl"
-    OPTS+=" --er-coef ${ER_COEF}"
-    OPTS+=" --er-store-prob ${ER_STORE_PROB}"
-    OPTS+=" --er-buffer-save-path ${ER_BUFFER_SAVE_PATH}"
-    if [ -n "${CURRENT_ER_BUFFER}" ]; then
-        OPTS+=" --er-buffer-load-path ${CURRENT_ER_BUFFER}"
-    fi
     # continual-learning settings
     OPTS+=" --cl-task-id ${TASK_ID}"
     OPTS+=" --cl-distill-coef ${CL_DISTILL_COEF}"
-    OPTS+=" --cl-distill-temp ${CL_DISTILL_TEMP}"
-    OPTS+=" --cl-transfer-top-k ${CL_TRANSFER_TOP_K}"
-    OPTS+=" --cl-cache-batch-size ${CL_CACHE_BATCH_SIZE}"
     # deepspeed
     OPTS+=" --deepspeed"
     OPTS+=" --deepspeed_config ${BASE_PATH}/configs/deepspeed/ds_config_bf16.json"
@@ -170,7 +151,6 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
 
     echo "Task ${TASK_ID} done. Checkpoint: ${NEXT_PEFT_PATH}"
     CURRENT_PEFT_PATH="${NEXT_PEFT_PATH}"
-    CURRENT_ER_BUFFER="${ER_BUFFER_SAVE_PATH}"
 
 done
 
