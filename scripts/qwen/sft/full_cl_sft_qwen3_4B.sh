@@ -2,7 +2,6 @@
 
 GPUS=(0 1)
 export CUDA_VISIBLE_DEVICES=$(IFS=,; echo "${GPUS[*]}")
-export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 MASTER_ADDR=localhost
 NNODES=1
@@ -14,9 +13,9 @@ BASE_PATH=.
 CKPT_NAME="qwen3-4B"
 CKPT="Qwen/Qwen3-4B-Instruct-2507"
 # hp
-BATCH_SIZE=2
+BATCH_SIZE=1
 LR=0.0001
-GRAD_ACC=8
+GRAD_ACC=16
 EVAL_BATCH_SIZE=32
 EPOCHS=3
 # length
@@ -27,7 +26,7 @@ SAVE_PATH="${BASE_PATH}/results/qwen3/sft_4B"
 SEED=42
 
 # Run name pattern (used to locate saved checkpoints)
-RUN_NAME="e${EPOCHS}-bs${BATCH_SIZE}-lr${LR}-G${GRAD_ACC}-N${GPUS_PER_NODE}-NN${NNODES}-lora-32-64-0.1"
+RUN_NAME="e${EPOCHS}-bs${BATCH_SIZE}-lr${LR}-G${GRAD_ACC}-N${GPUS_PER_NODE}-NN${NNODES}-lora-16-64-0.1"
 
 # Initial peft path: empty = task 0 starts with a fresh LoRA on the base model.
 # Set to an existing checkpoint path to resume from a prior SFT instead.

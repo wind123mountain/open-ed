@@ -303,10 +303,10 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
     if cl_task_id >= 1 and getattr(args, "cl_distill_coef", 0.0) > 0:
         old_model_module = copy.deepcopy(model.module)
         old_model_module.eval()
-        old_model_module.to("cpu")
+        old_model_module.to(device)
         for p in old_model_module.parameters():
             p.requires_grad_(False)
-        print_rank("[CL-Distill] Saved frozen old-model snapshot (CPU).")
+        print_rank("[CL-Distill] Saved frozen old-model snapshot (GPU).")
 
     for epoch in range(args.epochs):
         sampler.set_epoch(epoch)
