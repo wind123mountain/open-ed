@@ -135,6 +135,16 @@ def add_hp_args(parser: argparse.ArgumentParser):
                        help='loss scale')
     group.add_argument("--kd-ratio", type=float, default=None)
 
+    # Continual-learning task index (0 = first task, CE only; ≥1 = apply replay + distill)
+    group.add_argument("--cl-task-id", type=int, default=0,
+                       help="Current CL task index. Task 0 uses CE only; tasks ≥1 add replay and distillation losses.")
+
+    # Continual-learning distillation (old model → new model KL)
+    group.add_argument("--cl-distill-coef", type=float, default=0.0,
+                       help="Weight for KL distillation loss from frozen old model. 0 = disabled.")
+    group.add_argument("--cl-distill-temp", type=float, default=1.0,
+                       help="Softmax temperature τ for CL distillation KL.")
+
     group.add_argument('--warmup-iters', type=int, default=0,
                        help='percentage of data to warmup on (.01 = 1% of all '
                        'training iters). Default 0.01')
@@ -198,6 +208,22 @@ def add_distillm_args(parser: argparse.ArgumentParser):
     group.add_argument("--capacity", type=int, default=1000)
     group.add_argument("--replay-ratio", type=str, default="decreasing")
     # group.add_argument("--time", action="store_true")
+
+    # experience replay (cross-task CE loss on buffer samples)
+    group.add_argument("--er-coef", type=float, default=0.0,
+                       help="Weight for CE loss on replay-buffer samples. 0 = disabled.")
+    group.add_argument("--er-store-prob", type=float, default=0.1,
+                       help="Probability of storing each training batch into the replay buffer.")
+    group.add_argument("--er-buffer-load-path", type=str, default=None,
+                       help="Path to load a previously saved replay buffer (.pkl).")
+    group.add_argument("--er-buffer-save-path", type=str, default=None,
+                       help="Path to save the replay buffer (.pkl) after training.")
+
+    # CL transfer (Loss_Transfer: KD on replay samples using cached old-model logits)
+    group.add_argument("--cl-transfer-top-k", type=int, default=128,
+                       help="Top-k logits cached per token for Loss_Transfer.")
+    group.add_argument("--cl-cache-batch-size", type=int, default=4,
+                       help="Mini-batch size for pre-computing cached old-model logits on replay buffer.")
 
     group.add_argument("--student_layer_mapping", nargs='+', type=int, default=[-1])
     group.add_argument("--teacher_layer_mapping", nargs='+', type=int, default=[-1])

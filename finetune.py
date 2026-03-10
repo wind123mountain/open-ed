@@ -1,3 +1,4 @@
+import copy
 import time
 import os
 
@@ -152,10 +153,10 @@ def prepare_dataset(args, tokenizer):
         data["train"] = LMTrainDataset(args, tokenizer, args.data_dir, "train", args.train_num, args.train_ratio, rng_sample)
         print_rank("train num", len(data["train"]))
         data["dev"] = LMTrainDataset(args, tokenizer, args.data_dir, "valid", args.dev_num, args.dev_ratio, rng_sample)
-    elif args.do_eval:
-        data["test"] = LMTrainDataset(args, tokenizer, args.data_dir, "valid", args.dev_num, args.dev_ratio, rng_sample)
-    else:
+    elif not args.do_eval:
         raise ValueError("Do train and do eval must set one")
+    if args.do_eval:
+        data["test"] = LMTrainDataset(args, tokenizer, args.data_dir, "test", args.dev_num, args.dev_ratio, rng_sample)
         
     # pre-trained dataset
     if args.do_train and args.lm_data_dir is not None:
@@ -173,7 +174,124 @@ def pt_loss(args, model, model_batch, no_model_batch):
     return lm_loss
 
 
+def compute_loss_distill(old_model_module, new_logits, model_batch, no_model_batch,
+                         temperature: float = 1.0, device=None):
+    """KL distillation from the frozen old model to the current model.
+
+    Computes τ² · CE(p_old, p_new) on response token positions, which is
+    gradient-equivalent to τ² · KL(p_old || p_new) since H(p_old) is constant
+    w.r.t. the current model parameters (Hinton et al. 2015).
+
+    Uses cross-entropy formulation to avoid materializing a full [B,T,V]
+    output tensor from F.kl_div, which would OOM on large vocabularies.
+    """
+    old_model_module.eval()
+    old_model_module.to(device)
+    with torch.no_grad():
+        old_outputs = old_model_module(**model_batch, use_cache=False)
+        old_logits = old_outputs.logits.float().detach()   # [B, T, V]
+    old_model_module.to("cpu")  # move back to CPU to free GPU memory
+    torch.cuda.empty_cache()
+
+    # Only compute loss on response token positions (label != -100)
+    resp_mask = (no_model_batch["label"] != -100)  # [B, T]
+
+    tau = temperature
+    # Compute soft targets from old model, then free old_logits immediately
+    old_probs = F.softmax(old_logits / tau, dim=-1)
+    del old_logits
+
+    new_log_probs = F.log_softmax(new_logits.float() / tau, dim=-1)
+
+    # CE(p_old, p_new) per token = -Σ_v p_old · log(p_new)
+    ce_per_token = -(old_probs * new_log_probs).sum(dim=-1)  # [B, T]
+    del old_probs, new_log_probs
+
+    # Mean over response tokens, scaled by τ² to match gradient magnitudes
+    n_tokens = resp_mask.sum().clamp(min=1)
+    loss_distill = (tau ** 2) * (ce_per_token * resp_mask.float()).sum() / n_tokens
+
+    return loss_distill
+
+
+def compute_loss_transfer(new_logits, no_model_batch, cached_logits, temperature=1.0):
+    """KL distillation from cached old-model top-k probs on a replay batch.
+
+    Instead of running the old model forward, uses pre-computed top-k soft
+    probabilities stored in cached_logits.
+
+    Args:
+        new_logits: [B, T, V] from current model on replay batch.
+        no_model_batch: dict with "label" [B, T] (-100 for non-response).
+        cached_logits: dict with "top_k_indices" [B, T, K] and "top_k_probs" [B, T, K].
+        temperature: softmax temperature τ.
+
+    Returns:
+        Scalar loss: τ² · mean_response_tokens( -Σ_k p_old_k · log p_new_k ).
+    """
+    tau = temperature
+    resp_mask = (no_model_batch["label"] != -100)  # [B, T]
+
+    new_log_probs = F.log_softmax(new_logits.float() / tau, dim=-1)  # [B, T, V]
+
+    top_k_indices = cached_logits["top_k_indices"].to(device=new_logits.device, dtype=torch.long)  # [B, T, K]
+    top_k_probs = cached_logits["top_k_probs"].to(device=new_logits.device, dtype=torch.float32)   # [B, T, K]
+
+    # Gather new model log-probs at the cached top-k positions
+    new_log_probs_at_topk = torch.gather(new_log_probs, dim=-1, index=top_k_indices)  # [B, T, K]
+    del new_log_probs  # free [B, T, V] tensor
+
+    # CE(p_old_topk, p_new) per token = -Σ_k p_old_k · log p_new_k
+    ce_per_token = -(top_k_probs * new_log_probs_at_topk).sum(dim=-1)  # [B, T]
+
+    n_tokens = resp_mask.sum().clamp(min=1)
+    loss_transfer = (tau ** 2) * (ce_per_token * resp_mask.float()).sum() / n_tokens
+
+    return loss_transfer
+
+
+def count_unique_responses_buffer(replay_buffer):
+    """Count unique response token sequences in replay buffer items."""
+    patterns = set()
+    for item in replay_buffer.replay_memory:
+        label = item["label"]
+        resp_tokens = label[label != -100]
+        patterns.add(tuple(resp_tokens.tolist()))
+    return len(patterns)
+
+
+def count_unique_responses_dataset(dataset, model_type="qwen"):
+    """Count unique response token sequences in a training dataset.
+
+    Uses the sentinel marker (4294967295 for qwen, 65535 otherwise) to find
+    where the prompt ends and the response begins.
+    """
+    patterns = set()
+    sentinel = 4294967295 if model_type in ["qwen"] else 65535
+    for idx in range(len(dataset)):
+        raw = dataset[idx]
+        input_ids = raw["input_ids"]
+        if isinstance(input_ids, np.ndarray):
+            input_ids = input_ids.astype(np.int64)
+        else:
+            input_ids = np.array(input_ids, dtype=np.int64)
+        markers = np.where(input_ids == sentinel)[0]
+        if len(markers) > 0:
+            source_len = markers[0]
+            # Response tokens start after source_len (sentinel is removed in _process_lm)
+            resp_tokens = np.concatenate([input_ids[:source_len], input_ids[source_len + 1:]])
+            resp_tokens = resp_tokens[source_len:]
+        else:
+            resp_tokens = input_ids[1:]  # fallback: everything after first token
+        # Trim to max_length
+        max_len = getattr(dataset, 'max_length', len(resp_tokens))
+        resp_tokens = resp_tokens[:max_len - source_len if len(markers) > 0 else max_len]
+        patterns.add(tuple(resp_tokens.tolist()))
+    return len(patterns)
+
+
 def get_distil_loss(args, tokenizer, model, teacher_model, model_batch, no_model_batch, logits):
+    """Distillation loss from an external teacher model (for KD training types)."""
     with torch.no_grad():
         teacher_model.eval()
         teacher_outputs = teacher_model(**model_batch, use_cache=False)
@@ -265,19 +383,64 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
     student_generator = SampleGenerator(args, tokenizer)
 
     step, global_step = 1, 1
-    total_loss, total_distil_loss, total_time = 0.0, 0.0, 0.0
+    total_loss, total_distil_loss, total_cl_distill_loss, total_er_loss, total_transfer_loss, total_time = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
     
     adaptive_threshold = args.init_threshold if "adaptive" in args.type else -1.0
     prev_avg_loss = evaluate(args, tokenizer, model, dataset["dev"], "dev", 0, device, adaptive_threshold)
     replay_buffer = ReplayBuffer(args)
-    
+
+    # ── CL task gating: task 0 = CE only; task ≥1 = CE + replay + distillation ──
+    cl_task_id = getattr(args, "cl_task_id", 0)
+    cl_distill_coef = getattr(args, "cl_distill_coef", 0.0) if cl_task_id >= 1 else 0.0
+    cl_distill_temp = getattr(args, "cl_distill_temp", 1.0)
+    er_coef = getattr(args, "er_coef", 0.0) if cl_task_id >= 1 else 0.0
+    old_model_module = None
+
+    if cl_task_id >= 1 and cl_distill_coef > 0:
+        old_model_module = copy.deepcopy(model.module)
+        old_model_module.eval()
+        old_model_module.to("cpu")  # keep on CPU; moved to GPU only for inference
+        for p in old_model_module.parameters():
+            p.requires_grad_(False)
+        print_rank("[CL-Distill] Saved frozen old-model snapshot (CPU).")
+    else:
+        print_rank(f"[CL] Task {cl_task_id}: CE loss only (no distillation, no replay loss).")
+
+    # Load persisted replay buffer from a previous CL task
+    if cl_task_id >= 1 and getattr(args, "er_buffer_load_path", None):
+        replay_buffer.load(args.er_buffer_load_path)
+
+    # ── Derive class counts for class-count weighted loss combination ──
+    n_new = count_unique_responses_dataset(dataset["train"], model_type=args.model_type)
+    n_old = 0
+    if cl_task_id >= 1 and len(replay_buffer) > 0:
+        n_old = count_unique_responses_buffer(replay_buffer)
+    print_rank(f"[CL] Class counts: n_old={n_old}, n_new={n_new}")
+
+    # ── Pre-compute old model logits on replay buffer for Loss_Transfer ──
+    if cl_task_id >= 1 and old_model_module is not None and len(replay_buffer) > 0:
+        replay_buffer.cache_old_logits(
+            old_model=old_model_module,
+            device=device,
+            temperature=cl_distill_temp,
+            top_k=getattr(args, "cl_transfer_top_k", 128),
+            batch_size=getattr(args, "cl_cache_batch_size", 4),
+        )
+
     for epoch in range(args.epochs):
         sampler.set_epoch(epoch)
 
         model.train()
         for it, (model_batch, no_model_batch, gen_data, _, _) in enumerate(train_dataloader):
             dataset["train"].move_to_device(model_batch, no_model_batch, gen_data, device)
-            
+
+            # Store current-task batch into replay buffer with er_store_prob probability
+            if getattr(args, "er_coef", 0.0) > 0 and np.random.random() < getattr(args, "er_store_prob", 0.1):
+                store_mb = {k: v.detach().clone() for k, v in model_batch.items()}
+                store_nmb = {k: v.detach().clone() for k, v in no_model_batch.items()}
+                store_gd = {k: v.detach().clone() for k, v in gen_data.items()}
+                replay_buffer.move_to_memory(store_mb, store_nmb, store_gd)
+
             if args.lm_data_dir is not None:
                 try:
                     pt_model_batch, pt_no_model_batch, pt_gen_data = next(pt_train_iter)
@@ -342,7 +505,60 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
                 loss = (1 - args.kd_ratio) * lm_loss + args.kd_ratio * distil_loss
             else:
                 loss = lm_loss
-                
+
+            # ── 4-loss class-count weighted CL combination (task ≥1) ──
+            if cl_task_id >= 1 and old_model_module is not None:
+                # Loss_Distill: KL(old_model || new_model) on current batch
+                cl_distill_loss = compute_loss_distill(
+                    old_model_module, logits, model_batch, no_model_batch,
+                    temperature=cl_distill_temp, device=device)
+                total_cl_distill_loss += cl_distill_loss.item()
+
+                # Class-count weighted current-batch loss
+                if n_old > 0 and n_old + n_new > 0:
+                    loss = (n_old * cl_distill_loss + n_new * loss) / (n_old + n_new)
+
+                # Replay losses (Loss_Replay + Loss_Transfer)
+                if replay_buffer.cached_count >= replay_buffer.bs:
+                    rb_mb, rb_nmb, rb_gd, rb_cached = replay_buffer.sample_cached()
+                    rb_mb, rb_nmb, rb_gd = replay_buffer.move_to_device(
+                        rb_mb, rb_nmb, rb_gd, device)
+                    rb_outputs = model(**rb_mb, use_cache=False)
+                    rb_logits = rb_outputs.logits
+
+                    # Loss_Replay: CE on replay samples
+                    loss_replay = loss_func(rb_logits.float().view(-1, rb_logits.shape[-1]),
+                                            rb_nmb["label"].view(-1))
+                    total_er_loss += loss_replay.item()
+
+                    # Loss_Transfer: KD from cached old-model logits on replay samples
+                    loss_transfer = compute_loss_transfer(
+                        rb_logits, rb_nmb, rb_cached, temperature=cl_distill_temp)
+                    total_transfer_loss += loss_transfer.item()
+
+                    # Class-count weighted exemplar loss
+                    if n_old > 0 and n_old + n_new > 0:
+                        loss_exemplar = (n_old * loss_transfer + n_new * loss_replay) / (n_old + n_new)
+                    else:
+                        loss_exemplar = loss_replay
+
+                    # Combine current-task and exemplar losses by batch size
+                    N_cur = model_batch["input_ids"].size(0)
+                    N_replay = rb_mb["input_ids"].size(0)
+                    loss = (N_cur * loss + N_replay * loss_exemplar) / (N_cur + N_replay)
+
+            # Fallback: replay CE only (no distillation, e.g. cl_distill_coef=0 but er_coef>0)
+            elif er_coef > 0 and len(replay_buffer) >= replay_buffer.bs:
+                rb_model_batch, rb_no_model_batch, rb_gen_data = replay_buffer.sample()
+                rb_model_batch, rb_no_model_batch, rb_gen_data = replay_buffer.move_to_device(
+                    rb_model_batch, rb_no_model_batch, rb_gen_data, device)
+                rb_outputs = model(**rb_model_batch, use_cache=False)
+                rb_logits = rb_outputs.logits
+                rb_loss = loss_func(rb_logits.float().view(-1, rb_logits.shape[-1]),
+                                    rb_no_model_batch["label"].view(-1))
+                loss = loss + er_coef * rb_loss
+                total_er_loss += rb_loss.item()
+
             if args.lm_data_dir is not None:
                 assert args.lm_coef is not None
                 loss += args.lm_coef * pt_loss(args, model, pt_model_batch, pt_no_model_batch)
@@ -366,8 +582,8 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
             total_time += elapsed_time
 
             # Logging
-            def get_log(log_loss, log_distil_loss, log_time):
-                return "train | epoch {:3d} | Iter: {:6d}/{:6d} | global iter: {:6d}/{:6d} | loss: {:.4f} | ds_loss: {:.4f} | lr: {:.4e} | scale: {:10.4f} | micro time: {:.3f} | step time: {:.3f}".format(
+            def get_log(log_loss, log_distil_loss, log_cl_distill_loss, log_er_loss, log_transfer_loss, log_time):
+                return "train | epoch {:3d} | Iter: {:6d}/{:6d} | global iter: {:6d}/{:6d} | loss: {:.4f} | ds_loss: {:.4f} | cl_distill: {:.4f} | er_loss: {:.4f} | transfer: {:.4f} | lr: {:.4e} | scale: {:10.4f} | micro time: {:.3f} | step time: {:.3f}".format(
                     epoch,
                     step,
                     args.total_iters * args.gradient_accumulation_steps,
@@ -375,6 +591,9 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
                     args.total_iters,
                     log_loss,
                     log_distil_loss,
+                    log_cl_distill_loss,
+                    log_er_loss,
+                    log_transfer_loss,
                     lr_scheduler.get_last_lr()[0],
                     optimizer.cur_scale if hasattr(optimizer, "cur_scale") else 0,
                     elapsed_time,
@@ -385,19 +604,23 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
                 mid_log_step = args.gradient_accumulation_steps // args.mid_log_num
                 mid_log_step = 1 if mid_log_step == 0 else mid_log_step
                 if step % mid_log_step == 0:
-                    print_rank(get_log(global_loss, global_distil_loss, 0))
+                    print_rank(get_log(global_loss, global_distil_loss, 0, 0, 0, 0))
 
             if global_step % args.log_interval == 0 and step % args.gradient_accumulation_steps == 0:
+                n_log_steps = args.log_interval * args.gradient_accumulation_steps
                 log_str = get_log(
-                    total_loss / (args.log_interval * args.gradient_accumulation_steps),
-                    total_distil_loss / (args.log_interval * args.gradient_accumulation_steps),
+                    total_loss / n_log_steps,
+                    total_distil_loss / n_log_steps,
+                    total_cl_distill_loss / n_log_steps,
+                    total_er_loss / n_log_steps,
+                    total_transfer_loss / n_log_steps,
                     total_time / (args.log_interval))
                 print_rank("*" * 100)
                 print_rank(log_str)
                 print_rank(args.save)
                 print_rank("*" * 100)
                 save_rank(log_str, os.path.join(args.save, "log.txt"))
-                total_loss, total_distil_loss, total_time = 0.0, 0.0, 0.0
+                total_loss, total_distil_loss, total_cl_distill_loss, total_er_loss, total_transfer_loss, total_time = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
             
             # Checkpointing
             if args.save and args.save_interval and global_step % args.save_interval == 0 and step % args.gradient_accumulation_steps == 0:
@@ -429,7 +652,13 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
             
             if global_step > args.total_iters:
                 break
-            
+
+    # Persist replay buffer for next CL task
+    if getattr(args, "er_coef", 0.0) > 0 and getattr(args, "er_buffer_save_path", None):
+        if dist.get_rank() == 0:
+            replay_buffer.save(args.er_buffer_save_path)
+        dist.barrier()
+
     return model
 
 
