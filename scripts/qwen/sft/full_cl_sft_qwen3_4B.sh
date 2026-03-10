@@ -107,7 +107,7 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
     OPTS+=" --seed ${SEED}"
     # lora
     OPTS+=" --peft lora"
-    OPTS+=" --peft-lora-r 32"
+    OPTS+=" --peft-lora-r 16"
     OPTS+=" --peft-lora-alpha 64"
     OPTS+=" --peft-lora-dropout 0.1"
     if [ -n "${CURRENT_PEFT_PATH}" ]; then
@@ -131,7 +131,7 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
     OPTS+=" --deepspeed"
     OPTS+=" --deepspeed_config ${BASE_PATH}/configs/deepspeed/ds_config_bf16.json"
     # type
-    OPTS+=" --type lm"
+    OPTS+=" --type sfkl"
     # gen
     OPTS+=" --do-sample"
     OPTS+=" --top-k 0"
