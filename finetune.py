@@ -404,7 +404,8 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
             
             # Checkpointing
             if args.save and args.save_interval and global_step % args.save_interval == 0 and step % args.gradient_accumulation_steps == 0:
-                save_dir_path = os.path.join(args.save, str(global_step))
+                cl_task_prefix = f"task_{getattr(args, 'cl_task_id', 0)}"
+                save_dir_path = os.path.join(args.save, cl_task_prefix, str(global_step))
                 if args.model_parallel:
                     raise NotImplementedError
                 else:

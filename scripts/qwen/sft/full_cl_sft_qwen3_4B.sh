@@ -141,7 +141,7 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
     fi
 
     # Locate the latest checkpoint saved for this task (highest step number directory)
-    NEXT_PEFT_PATH=$(ls -d ${SAVE_PATH}/${RUN_NAME}/[0-9]* 2>/dev/null | sort -V | tail -1)
+    NEXT_PEFT_PATH=$(ls -d ${SAVE_PATH}/${RUN_NAME}/task_${TASK_ID}/[0-9]* 2>/dev/null | sort -V | tail -1)
 
     if [ -z "${NEXT_PEFT_PATH}" ]; then
         echo "ERROR: Could not find checkpoint for task ${TASK_ID} under ${SAVE_PATH}/${RUN_NAME}/. Aborting."
