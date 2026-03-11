@@ -139,16 +139,7 @@ def get_model(args, device):
                 model.enable_input_require_grads()
                 if args.peft_path is not None:
                     if args.do_train:
-                        _model = PeftModel.from_pretrained(model, args.peft_path)
-                        state_dict = dict(_model.state_dict().items())
-                        peft_config = LoraConfig(
-                            task_type=TaskType.CAUSAL_LM, inference_mode=(not args.do_train), r=args.peft_lora_r, lora_alpha=args.peft_lora_alpha, lora_dropout=args.peft_lora_dropout
-                        )
-                        model = get_peft_model(model, peft_config)
-                        model.load_state_dict(state_dict)
-                        
-                        del _model
-                        del state_dict
+                        model = PeftModel.from_pretrained(model, args.peft_path, is_trainable=True)
                     else:
                         model = PeftModel.from_pretrained(model, args.peft_path)
                 else:
