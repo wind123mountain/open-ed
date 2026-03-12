@@ -32,6 +32,13 @@ class LMTrainDataset(Dataset):
             with open(os.path.join(path, f"{split}.jsonl")) as f:
                 self.raw = [json.loads(line) for line in f.readlines()]
                 self.answers = [x["response"] if isinstance(x["response"], list) else [x["response"]] for x in self.raw]
+                self.full_texts = [x["prompt"] + x["response"] for x in self.raw]
+                self.offset_mapping = [tokenizer(text, return_offsets_mapping=True, truncation=True, 
+                                                 max_length=self.max_length, padding="max_length",
+                                                 add_special_tokens=False, return_tensors="pt")["offset_mapping"]
+                                       for text in self.full_texts]
+                
+                self.get_span_offsets()
         
         print_rank(len(self.lm_ctx))
         if num == -1:
@@ -40,6 +47,42 @@ class LMTrainDataset(Dataset):
             self.num = num
 
         print_rank(f"Num LM instances: {len(self.lm_ctx)}")
+
+    def get_span_offsets(self):
+        self.span_offsets = []
+        for item, full_text in zip(self.raw, self.full_texts):
+            response_str = item["response"]
+            response_json = json.loads(response_str)
+
+            values_to_find = []
+            for event in response_json.get("events", []):
+                values_to_find.append(event[0])  # 1. trigger
+                values_to_find.append(event[1])  # 2. event_type
+                
+                if len(event) > 3:
+                    for arg in event[2]:             # 3. Duyệt qua các arguments
+                        values_to_find.append(arg[0])  # arg_span
+                        values_to_find.append(arg[1])  # arg_role
+                    
+                    values_to_find.append(event[3])  # 4. description
+
+                else:
+                    values_to_find.append(event[2])  # 3. description
+
+            result_tuples = []
+            # search_start_idx = len(full_text) - len(response_str)
+            search_start_idx = 0
+
+            for val in values_to_find:
+                search_str = f'{val}'
+                char_start = full_text.find(search_str, search_start_idx)
+                
+                if char_start != -1:
+                    char_end = char_start + len(val)
+                    result_tuples.append((char_start, char_end))
+                    search_start_idx = char_end + 1
+
+            self.span_offsets.append(result_tuples)
 
     def __len__(self):
         return self.num
@@ -58,7 +101,9 @@ class LMTrainDataset(Dataset):
 
         return {
             "input_ids": input_ids,
-            "t_input_ids": t_input_ids
+            "t_input_ids": t_input_ids,
+            "span_offsets": self.span_offsets[index],
+            "offset_mapping": self.offset_mapping[index]
         }
 
     def _process_lm(self, i, samp, model_data, no_model_data, gen_data):
@@ -96,7 +141,8 @@ class LMTrainDataset(Dataset):
             model_data[k] = model_data[k].to(device)
 
         for k in no_model_data:
-            no_model_data[k] = no_model_data[k].to(device)
+            if isinstance(no_model_data[k], torch.Tensor):
+                no_model_data[k] = no_model_data[k].to(device)
 
         if gen_data is not None:
             for k in gen_data:
@@ -119,7 +165,9 @@ class LMTrainDataset(Dataset):
             
         no_model_data = {
             "label": torch.ones(bs, max_length, dtype=torch.long) * -100,
-            "loss_mask": torch.zeros(bs, max_length)
+            "loss_mask": torch.zeros(bs, max_length),
+            "span_offsets": [sample["span_offsets"] for sample in samples],
+            "offset_mapping": torch.concat([sample["offset_mapping"] for sample in samples])
         }
         
         gen_data = {

@@ -79,7 +79,7 @@ OPTS+=" --seed ${SEED}"
 OPTS+=" --peft lora"
 OPTS+=" --peft-lora-r 64"
 OPTS+=" --peft-lora-alpha 128"
-OPTS+=" --peft-lora-dropout 0.05"
+OPTS+=" --peft-lora-dropout 0.1"
 # OPTS+=" --peft-path results/qwen3/sft_4B/e3-bs2-lr0.0001-G8-N2-NN1-lora-32-64-0.1/78"
 
 # deepspeed
