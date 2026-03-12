@@ -152,10 +152,9 @@ def prepare_dataset(args, tokenizer):
         data["train"] = LMTrainDataset(args, tokenizer, args.data_dir, "train", args.train_num, args.train_ratio, rng_sample)
         print_rank("train num", len(data["train"]))
         data["dev"] = LMTrainDataset(args, tokenizer, args.data_dir, "valid", args.dev_num, args.dev_ratio, rng_sample)
-    elif not args.do_eval:
-        raise ValueError("Do train and do eval must set one")
-    if args.do_eval:
-        data["test"] = LMTrainDataset(args, tokenizer, args.data_dir, "test", args.dev_num, args.dev_ratio, rng_sample)
+
+    data["test"] = LMTrainDataset(args, tokenizer, args.data_dir, "test", args.dev_num, args.dev_ratio, rng_sample)
+
         
     # pre-trained dataset
     if args.do_train and args.lm_data_dir is not None:
@@ -424,6 +423,8 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
                         adaptive_threshold += 0.1
                         adaptive_threshold = min(adaptive_threshold, 1.0)
                         prev_avg_loss = curr_avg_loss
+
+                evaluate(args, tokenizer, model, dataset["test"], "test", epoch, device)
                     
                 model.train()
                 

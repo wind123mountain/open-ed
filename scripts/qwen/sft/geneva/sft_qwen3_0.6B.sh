@@ -20,7 +20,7 @@ BASE_PATH=.
 CKPT_NAME="qwen3-0.6B"
 CKPT="Qwen/Qwen3-0.6B"
 # data
-DATA_DIR="${BASE_PATH}/processed_data/geneva_teacher/qwen/"
+DATA_DIR="${BASE_PATH}/processed_data/geneva/qwen/"
 # DATA_DIR="${BASE_PATH}/processed_data/qwen/"
 # hp
 BATCH_SIZE=8

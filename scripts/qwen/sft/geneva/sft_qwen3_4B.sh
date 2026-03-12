@@ -24,7 +24,7 @@ DATA_DIR="${BASE_PATH}/processed_data/geneva/qwen/"
 # DATA_DIR="${BASE_PATH}/processed_data/qwen/"
 # hp
 BATCH_SIZE=2
-LR=0.0001
+LR=0.0003
 GRAD_ACC=8
 EVAL_BATCH_SIZE=32
 EPOCHS=5
@@ -76,8 +76,8 @@ OPTS+=" --save ${SAVE_PATH}"
 OPTS+=" --seed ${SEED}"
 # lora
 OPTS+=" --peft lora"
-OPTS+=" --peft-lora-r 32"
-OPTS+=" --peft-lora-alpha 64"
+OPTS+=" --peft-lora-r 64"
+OPTS+=" --peft-lora-alpha 128"
 OPTS+=" --peft-lora-dropout 0.05"
 # OPTS+=" --peft-path results/qwen3/sft_4B/e3-bs2-lr0.0001-G8-N2-NN1-lora-32-64-0.1/78"
 

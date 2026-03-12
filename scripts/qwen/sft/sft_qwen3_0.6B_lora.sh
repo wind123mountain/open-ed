@@ -21,7 +21,7 @@ CKPT_NAME="qwen3-0.6B"
 CKPT="Qwen/Qwen3-0.6B"
 # data
 # DATA_DIR="${BASE_PATH}/processed_data/ace/qwen/"
-DATA_DIR="${BASE_PATH}/processed_data/qwen/"
+# DATA_DIR="${BASE_PATH}/processed_data/qwen/"
 # hp
 BATCH_SIZE=8
 LR=0.00005
