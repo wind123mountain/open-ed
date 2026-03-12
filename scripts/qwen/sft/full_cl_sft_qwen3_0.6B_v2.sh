@@ -10,23 +10,20 @@ GPUS_PER_NODE=${#GPUS[@]}
 
 # model
 BASE_PATH=.
-CKPT_NAME="qwen3-4B"
-CKPT="Qwen/Qwen3-4B-Instruct-2507"
+CKPT_NAME="qwen3-0.6B"
+CKPT="Qwen/Qwen3-0.6B"
 # hp
-BATCH_SIZE=1
+BATCH_SIZE=4
 LR=0.0001
-GRAD_ACC=16
+GRAD_ACC=4
 EVAL_BATCH_SIZE=32
 EPOCHS=3
 # length
 MAX_LENGTH=768
 # runtime
-SAVE_PATH="${BASE_PATH}/results/qwen3/sft_4B"
+SAVE_PATH="${BASE_PATH}/results/qwen3/sft_0.6B_cl_v2"
 # seed
 SEED=42
-
-# Run name pattern (used to locate saved checkpoints)
-RUN_NAME="e${EPOCHS}-bs${BATCH_SIZE}-lr${LR}-G${GRAD_ACC}-N${GPUS_PER_NODE}-NN${NNODES}-lora-16-64-0.1"
 
 # Initial peft path: empty = task 0 starts with a fresh LoRA on the base model.
 # Set to an existing checkpoint path to resume from a prior SFT instead.
@@ -39,10 +36,10 @@ NUM_TASKS=5
 START_TASK=0  # Change to resume from a later task (e.g. 1 if task 0 is done)
 
 # Clean up previous run
-rm -rf "${SAVE_PATH}/${RUN_NAME}"
+rm -rf "${SAVE_PATH}"
 
 # Log all output (stdout + stderr) to file while still printing to terminal
-LOG_FILE_PATH="${SAVE_PATH}/${RUN_NAME}/full_run.log"
+LOG_FILE_PATH="${SAVE_PATH}/full_run.log"
 mkdir -p "$(dirname "${LOG_FILE_PATH}")"
 exec > >(tee -a "${LOG_FILE_PATH}") 2>&1
 
@@ -56,7 +53,7 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
                       --master_addr $MASTER_ADDR \
                       --master_port $MASTER_PORT"
 
-    DATA_DIR="${BASE_PATH}/processed_data/ace/${TASK_ID}/qwen/"
+    DATA_DIR="${BASE_PATH}/processed_data/ace_v2/${TASK_ID}/qwen/"
 
     OPTS=""
     # model
@@ -91,10 +88,10 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
     OPTS+=" --eval-gen"
     OPTS+=" --save-interval -1"
     OPTS+=" --eval-interval -1"
-    OPTS+=" --log-interval 20"
+    OPTS+=" --log-interval 10"
     OPTS+=" --mid-log-num -1"
-    OPTS+=" --save ${SAVE_PATH}/${RUN_NAME}"
-    OPTS+=" --kd-ratio 0.5"
+    OPTS+=" --save ${SAVE_PATH}/${TASK_ID}"
+    OPTS+=" --kd-ratio 1.0"
     # seed
     OPTS+=" --seed ${SEED}"
     # lora
@@ -112,7 +109,7 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
     OPTS+=" --deepspeed"
     OPTS+=" --deepspeed_config ${BASE_PATH}/configs/deepspeed/ds_config_bf16.json"
     # type
-    OPTS+=" --type rkl"
+    OPTS+=" --type fkl"
     # gen
     OPTS+=" --do-sample"
     OPTS+=" --top-k 0"
@@ -123,7 +120,7 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
     export WANDB_DISABLED=True
     export TF_CPP_MIN_LOG_LEVEL=3
     export PYTHONPATH=${BASE_PATH}
-    CMD="torchrun ${DISTRIBUTED_ARGS} ${BASE_PATH}/finetune.py ${OPTS}"
+    CMD="torchrun ${DISTRIBUTED_ARGS} ${BASE_PATH}/finetune_v2.py ${OPTS}"
 
     echo "=============================="
     echo "Task ${TASK_ID} / $((NUM_TASKS - 1))"
@@ -141,10 +138,10 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
     fi
 
     # Locate the latest checkpoint saved for this task (highest step number directory)
-    NEXT_PEFT_PATH=$(ls -d ${SAVE_PATH}/${RUN_NAME}/task_${TASK_ID}/[0-9]* 2>/dev/null | sort -V | tail -1)
+    NEXT_PEFT_PATH=$(ls -d ${SAVE_PATH}/${TASK_ID}/[0-9]* 2>/dev/null | sort -V | tail -1)
 
     if [ -z "${NEXT_PEFT_PATH}" ]; then
-        echo "ERROR: Could not find checkpoint for task ${TASK_ID} under ${SAVE_PATH}/${RUN_NAME}/. Aborting."
+        echo "ERROR: Could not find checkpoint for task ${TASK_ID} under ${SAVE_PATH}/${TASK_ID}/. Aborting."
         exit 1
     fi
 
@@ -159,6 +156,6 @@ echo "Final checkpoint: ${CURRENT_PEFT_PATH}"
 echo "=============================="
 
 # Export all eval results to CSV
-LOG_FILE="${SAVE_PATH}/${RUN_NAME}/log.txt"
-CSV_FILE="${SAVE_PATH}/${RUN_NAME}/eval_results.csv"
+LOG_FILE="${SAVE_PATH}/${TASK_ID}/log.txt"
+CSV_FILE="${SAVE_PATH}/${TASK_ID}/eval_results.csv"
 python ${BASE_PATH}/tools/parse_log_to_csv.py --log "${LOG_FILE}" --out "${CSV_FILE}"

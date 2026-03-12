@@ -91,7 +91,7 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
     OPTS+=" --log-interval 10"
     OPTS+=" --mid-log-num -1"
     OPTS+=" --save ${SAVE_PATH}/${TASK_ID}"
-    OPTS+=" --kd-ratio 0.9"
+    OPTS+=" --kd-ratio 0.7"
     # seed
     OPTS+=" --seed ${SEED}"
     # lora
