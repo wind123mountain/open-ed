@@ -14,7 +14,7 @@ CKPT_NAME="qwen3-4B"
 CKPT="Qwen/Qwen3-4B-Instruct-2507"
 # hp
 BATCH_SIZE=1
-LR=0.0001
+LR=0.0002
 GRAD_ACC=16
 EVAL_BATCH_SIZE=32
 EPOCHS=3
@@ -96,7 +96,7 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
     OPTS+=" --seed ${SEED}"
     # lora
     OPTS+=" --peft lora"
-    OPTS+=" --peft-lora-r 16"
+    OPTS+=" --peft-lora-r 32"
     OPTS+=" --peft-lora-alpha 64"
     OPTS+=" --peft-lora-dropout 0.1"
     if [ -n "${CURRENT_PEFT_PATH}" ]; then
@@ -111,7 +111,7 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
     # type
     OPTS+=" --type fkl"
     # gen
-    OPTS+=" --do-sample"
+    # OPTS+=" --do-sample"
     OPTS+=" --top-k 0"
     OPTS+=" --top-p 0.95"
     OPTS+=" --temperature 0.5"
