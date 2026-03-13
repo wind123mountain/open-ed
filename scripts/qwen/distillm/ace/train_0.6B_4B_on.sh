@@ -22,17 +22,17 @@ CKPT="Qwen/Qwen3-0.6B"
 TEACHER_CKPT_NAME="qwen3-4B"
 TEACHER_CKPT="Qwen/Qwen3-4B-Instruct-2507"
 # data
-DATA_DIR="${BASE_PATH}/processed_data/geneva/qwen/"
+DATA_DIR="${BASE_PATH}/processed_data/ace/qwen/"
 # hp
 BATCH_SIZE=2
-LR=0.0002
+LR=0.0001
 GRAD_ACC=8
 EVAL_BATCH_SIZE=32
 EPOCHS=5
 # length
 MAX_LENGTH=768
 # runtime
-SAVE_PATH="${BASE_PATH}/results/qwen3/fdd/0.6B_4B_geneva"
+SAVE_PATH="${BASE_PATH}/results/qwen3/distillm_0.6B_4B_ace_srkl_on"
 # seed
 SEED=42
 
@@ -45,7 +45,7 @@ OPTS+=" --teacher-model-path ${TEACHER_CKPT}"
 OPTS+=" --ckpt-name ${CKPT_NAME}"
 OPTS+=" --teacher-ckpt-name ${TEACHER_CKPT_NAME}"
 OPTS+=" --teacher-model-fp16"
-OPTS+=" --teacher-peft-path results/qwen3/sft_4B_geneva/e5-bs2-lr0.0003-G8-N2-NN1-lora-64-128-0.05/305"
+OPTS+=" --teacher-peft-path results/qwen3/sft_4B_ace/e5-bs2-lr0.0001-G8-N2-NN1-lora-32-64-0.05/490"
 OPTS+=" --model-type qwen"
 OPTS+=" --n-gpu ${GPUS_PER_NODE}"
 # data
@@ -62,7 +62,7 @@ OPTS+=" --lr-decay-style cosine"
 OPTS+=" --weight-decay 1e-2"
 OPTS+=" --clip-grad 1.0"
 OPTS+=" --epochs ${EPOCHS}"
-OPTS+=" --kd-ratio 0.6"
+OPTS+=" --kd-ratio 0.7"
 # length
 OPTS+=" --max-length ${MAX_LENGTH}"
 OPTS+=" --max-prompt-length 460"
@@ -81,7 +81,7 @@ OPTS+=" --seed ${SEED}"
 OPTS+=" --deepspeed"
 OPTS+=" --deepspeed_config ${BASE_PATH}/configs/deepspeed/ds_config_bf16.json"
 # type
-OPTS+=" --type srkl"
+OPTS+=" --type adaptive-srkl"
 # gen
 OPTS+=" --do-sample"
 OPTS+=" --top-k 0"
@@ -100,15 +100,12 @@ OPTS+=" --peft-lora-r 8"
 OPTS+=" --peft-lora-alpha 64"
 OPTS+=" --peft-lora-dropout 0.1"
 
-OPTS+=" --teacher_layer_mapping 11 23"
-OPTS+=" --student_layer_mapping 9 18"
-
 
 export NCCL_DEBUG=""
 export WANDB_DISABLED=True
 export TF_CPP_MIN_LOG_LEVEL=3
 export PYTHONPATH=${BASE_PATH}
-CMD="torchrun ${DISTRIBUTED_ARGS} ${BASE_PATH}/fdd_finetune.py ${OPTS} $@"
+CMD="torchrun ${DISTRIBUTED_ARGS} ${BASE_PATH}/finetune.py ${OPTS} $@"
 
 echo ${CMD}
 echo "PYTHONPATH=${PYTHONPATH}"
