@@ -81,7 +81,7 @@ OPTS+=" --seed ${SEED}"
 OPTS+=" --deepspeed"
 OPTS+=" --deepspeed_config ${BASE_PATH}/configs/deepspeed/ds_config_bf16.json"
 # type
-OPTS+=" --type fkl"
+OPTS+=" --type rkl"
 # gen
 OPTS+=" --do-sample"
 OPTS+=" --top-k 0"
