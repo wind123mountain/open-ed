@@ -19,7 +19,7 @@ GRAD_ACC=4
 EVAL_BATCH_SIZE=32
 EPOCHS=3
 # length
-MAX_LENGTH=768
+MAX_LENGTH=512
 # runtime
 SAVE_PATH="${BASE_PATH}/results/qwen3/geneva_0.6B_cl_v3"
 # seed
@@ -81,6 +81,8 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
     # length
     OPTS+=" --max-length ${MAX_LENGTH}"
     OPTS+=" --max-prompt-length 460"
+    OPTS+=" --t-max-prompt-length 640"
+    OPTS+=" --t-max-length 640"
     # runtime
     OPTS+=" --do-train"
     OPTS+=" --do-valid"
@@ -96,8 +98,8 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
     OPTS+=" --seed ${SEED}"
     # lora
     OPTS+=" --peft lora"
-    OPTS+=" --peft-lora-r 32"
-    OPTS+=" --peft-lora-alpha 64"
+    OPTS+=" --peft-lora-r 64"
+    OPTS+=" --peft-lora-alpha 128"
     OPTS+=" --peft-lora-dropout 0.1"
     if [ -n "${CURRENT_PEFT_PATH}" ]; then
         OPTS+=" --peft-path ${CURRENT_PEFT_PATH}"

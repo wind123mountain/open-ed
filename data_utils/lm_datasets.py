@@ -59,15 +59,18 @@ class LMTrainDataset(Dataset):
                 values_to_find.append(event[0])  # 1. trigger
                 values_to_find.append(event[1])  # 2. event_type
                 
-                if len(event) > 3:
-                    for arg in event[2]:             # 3. Duyệt qua các arguments
-                        values_to_find.append(arg[0])  # arg_span
-                        values_to_find.append(arg[1])  # arg_role
-                    
-                    values_to_find.append(event[3])  # 4. description
+                try:
+                    if len(event) > 3:
+                        for arg in event[2]:             # 3. Duyệt qua các arguments
+                            values_to_find.append(arg[0])  # arg_span
+                            values_to_find.append(arg[1])  # arg_role
+                        
+                        values_to_find.append(event[3])  # 4. description
 
-                else:
-                    values_to_find.append(event[2])  # 3. description
+                    else:
+                        values_to_find.append(event[2])  # 3. description
+                except:
+                    pass
 
             result_tuples = []
             # search_start_idx = len(full_text) - len(response_str)

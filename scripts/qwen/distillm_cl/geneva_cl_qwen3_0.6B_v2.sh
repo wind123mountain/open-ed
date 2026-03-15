@@ -17,11 +17,11 @@ BATCH_SIZE=4
 LR=0.0001
 GRAD_ACC=4
 EVAL_BATCH_SIZE=32
-EPOCHS=3
+EPOCHS=5
 # length
 MAX_LENGTH=768
 # runtime
-SAVE_PATH="${BASE_PATH}/results/qwen3/geneva_4B_cl_v2"
+SAVE_PATH="${BASE_PATH}/results/qwen3/geneva_0.6B_cl_v2"
 # seed
 SEED=42
 
@@ -91,13 +91,13 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
     OPTS+=" --log-interval 10"
     OPTS+=" --mid-log-num -1"
     OPTS+=" --save ${SAVE_PATH}/${TASK_ID}"
-    OPTS+=" --kd-ratio 1.0"
+    OPTS+=" --kd-ratio 0.1"
     # seed
     OPTS+=" --seed ${SEED}"
     # lora
     OPTS+=" --peft lora"
-    OPTS+=" --peft-lora-r 16"
-    OPTS+=" --peft-lora-alpha 64"
+    OPTS+=" --peft-lora-r 64"
+    OPTS+=" --peft-lora-alpha 128"
     OPTS+=" --peft-lora-dropout 0.1"
     if [ -n "${CURRENT_PEFT_PATH}" ]; then
         OPTS+=" --peft-path ${CURRENT_PEFT_PATH}"
@@ -109,7 +109,7 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
     OPTS+=" --deepspeed"
     OPTS+=" --deepspeed_config ${BASE_PATH}/configs/deepspeed/ds_config_bf16.json"
     # type
-    OPTS+=" --type fkl"
+    OPTS+=" --type sfkl"
     # gen
     OPTS+=" --do-sample"
     OPTS+=" --top-k 0"
