@@ -38,7 +38,7 @@ from utils import load_parallel, save_parallel
 from utils import get_tokenizer, get_model
 
 from distillm import forward_kl, reverse_kl, js_distance, tv_distance
-from distillm import skewed_forward_kl, skewed_reverse_kl
+from distillm import skewed_forward_kl, skewed_reverse_kl, csd
 from distillm import SampleGenerator, ReplayBuffer
 
 from rouge_metric import compute_metrics
@@ -192,6 +192,8 @@ def get_distil_loss(args, tokenizer, model, teacher_model, model_batch, no_model
             distil_loss = forward_kl(logits, teacher_logits, no_model_batch)
         elif "rkl" in args.type:
             distil_loss = reverse_kl(logits, teacher_logits, no_model_batch)
+        elif "csd" in args.type:
+            distil_loss = csd(logits, teacher_logits, no_model_batch)
         else:
             raise NotImplementedError
     return distil_loss

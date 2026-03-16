@@ -487,6 +487,8 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
     for epoch in range(args.epochs):
         sampler.set_epoch(epoch)
 
+        alloc_sum = alloc_count = 0
+
         model.train()
         for it, (model_batch, no_model_batch, gen_data, _, _) in enumerate(train_dataloader):
             dataset["train"].move_to_device(model_batch, no_model_batch, gen_data, device)
@@ -628,6 +630,18 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
                 print_rank("*" * 100)
                 save_rank(log_str, os.path.join(args.save, "log.txt"))
                 total_loss, total_distil_loss, total_time = 0.0, 0.0, 0.0
+
+                # --- MEMORY MEASUREMENT BLOCK ---
+                allocated   = torch.cuda.memory_allocated() / 1e9
+                peak_alloc  = torch.cuda.max_memory_allocated() / 1e9
+
+                alloc_sum   += allocated
+                alloc_count += 1
+                avg_alloc   = alloc_sum / alloc_count
+
+                print_rank("train | avg_alloc {:.4f} GB | peak_alloc {:.4f} GB".format(avg_alloc, peak_alloc))
+
+                # --- END MEMORY MEASUREMENT BLOCK ---
             
             # Checkpointing
             if args.save and args.save_interval and global_step % args.save_interval == 0 and step % args.gradient_accumulation_steps == 0:
