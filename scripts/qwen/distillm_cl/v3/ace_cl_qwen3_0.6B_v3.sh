@@ -1,5 +1,9 @@
 #! /bin/bash
 
+data=$1
+perm=$2
+
+
 GPUS=(0 1)
 export CUDA_VISIBLE_DEVICES=$(IFS=,; echo "${GPUS[*]}")
 
@@ -16,12 +20,12 @@ CKPT="Qwen/Qwen3-0.6B"
 BATCH_SIZE=4
 LR=0.0001
 GRAD_ACC=4
-EVAL_BATCH_SIZE=32
+EVAL_BATCH_SIZE=64
 EPOCHS=3
 # length
-MAX_LENGTH=512
+MAX_LENGTH=640
 # runtime
-SAVE_PATH="${BASE_PATH}/results/qwen3/ace_0.6B_cl_v3"
+SAVE_PATH="${BASE_PATH}/results/qwen3/v3/${data}_${perm}_0.6B_cl"
 # seed
 SEED=42
 
@@ -53,7 +57,7 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
                       --master_addr $MASTER_ADDR \
                       --master_port $MASTER_PORT"
 
-    DATA_DIR="${BASE_PATH}/processed_data/ace_v3/${TASK_ID}/qwen/"
+    DATA_DIR="${BASE_PATH}/processed_data/${data}_v3_${perm}/${TASK_ID}/qwen/"
 
     OPTS=""
     # model
@@ -80,9 +84,9 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
     OPTS+=" --epochs ${EPOCHS}"
     # length
     OPTS+=" --max-length ${MAX_LENGTH}"
-    OPTS+=" --max-prompt-length 460"
-    OPTS+=" --t-max-prompt-length 640"
-    OPTS+=" --t-max-length 640"
+    OPTS+=" --max-prompt-length 512"
+    OPTS+=" --t-max-prompt-length 768"
+    OPTS+=" --t-max-length 768"
     # runtime
     OPTS+=" --do-train"
     OPTS+=" --do-valid"
