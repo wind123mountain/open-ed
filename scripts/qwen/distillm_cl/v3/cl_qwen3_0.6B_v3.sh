@@ -2,6 +2,7 @@
 
 data=$1
 perm=$2
+kd=$3
 
 
 GPUS=(0 1)
@@ -97,7 +98,7 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
     OPTS+=" --log-interval 10"
     OPTS+=" --mid-log-num -1"
     OPTS+=" --save ${SAVE_PATH}/${TASK_ID}"
-    OPTS+=" --kd-ratio 1.0"
+    OPTS+=" --kd-ratio ${kd}"
     # seed
     OPTS+=" --seed ${SEED}"
     # lora

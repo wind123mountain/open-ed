@@ -1,0 +1,103 @@
+### Distillation
+
+- Prompt:
+```
+<|im_start|>system
+You are an open-domain event extraction system. Your task is to identify events expressed or clearly implied in a given text.
+IMPORTANT:Output ONLY valid JSON. No explanations, no markdown, no extra text.
+Output Format (JSON only, no markdown):
+
+{"events": [[<trigger span>, <event type>, [[<argument span>, <semantic role>], [<argument span 2>, <semantic role 2>]], <description>], [<trigger span 2>, <event type 2>, [], <description 2>]]}
+
+- If no events are detected, return: {"events": []}<|im_end|>
+<|im_start|>user
+Given an input text: 
+<input>
+Even as the secretary of homeland security was putting his people on high alert last month , a 30-foot Cuban patrol boat with four heavily armed men landed on American shores , utterly undetected by the Coast Guard Secretary Ridge now leads .
+</input>
+
+Your task is to extract all events present in the text. The text may contain zero, one, or multiple events.
+
+For each event:
+- Identify a trigger: the word or phrase that most clearly indicates the event.
+- Identify event type
+- Description: explaining what this event type means
+
+Constraints and Guidelines
+- Do not invent information not supported by the text.
+- Do not paraphrase triggers or arguments.
+- The "text" field must exactly match a span in the original input (from <input>...</input>).
+<|im_end|>
+<|im_start|>assistant
+```
+
+- Output:
+```
+{
+  "events": [
+    [
+      "landed", "Movement:Transport",
+      [
+        ["boat", "Vehicle"],
+        ["men", "Artifact"],
+        ["shores", "Destination"]
+      ],
+      "This event describes the physical movement of a vehicle and individuals from one location to another, specifically onto American shores."
+    ]
+  ]
+}
+```
+
+### CL Distillation
+
+- Student Prompt:
+
+```
+<|im_start|>system
+You are an event extraction system. 
+Your task is to assign the correct event type and argument roles to a given trigger and its arguments.
+You will be provided with: an input text, a trigger span
+
+IMPORTANT: Output ONLY valid JSON. Output Format (JSON only, no markdown):
+{"events": [[<trigger span>, <event type>], [<trigger span 2>, <event type 2>]]}
+<|im_end|>
+<|im_start|>user
+
+Input text:
+He lost an election to a dead man .
+
+Trigger:
+['election']
+<|im_end|>
+<|im_start|>assistant
+```
+
+- Teacher Prompt:
+```
+<|im_start|>system
+You are an event extraction system. 
+Your task is to assign the correct event type and argument roles to a given trigger and its arguments.
+You will be provided with: an input text, a trigger span
+
+IMPORTANT: Output ONLY valid JSON. Output Format (JSON only, no markdown):
+{"events": [[<trigger span>, <event type>], [<trigger span 2>, <event type 2>]]}
+<|im_end|>
+<|im_start|>user
+
+Input text:
+He lost an election to a dead man .
+
+Trigger:
+['election']
+
+Here is a reference response to the input sentence:
+{"events": [["election", "Personnel:Elect"]]}
+You may include additional valid triggers not in the reference. Now provide your own extraction, including the thinking process::
+<|im_end|>
+<|im_start|>assistant
+```
+
+- Output:
+```
+{"events": [["election", "Personnel:Elect"]]}
+```
