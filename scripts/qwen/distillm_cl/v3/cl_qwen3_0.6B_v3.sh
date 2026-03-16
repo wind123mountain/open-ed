@@ -24,7 +24,7 @@ GRAD_ACC=4
 EVAL_BATCH_SIZE=32
 EPOCHS=3
 # length
-MAX_LENGTH=512
+MAX_LENGTH=640
 # runtime
 SAVE_PATH="${BASE_PATH}/results/qwen3/v3/${data}_${perm}_0.6B_cl"
 # seed
@@ -85,9 +85,9 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
     OPTS+=" --epochs ${EPOCHS}"
     # length
     OPTS+=" --max-length ${MAX_LENGTH}"
-    OPTS+=" --max-prompt-length 460"
-    OPTS+=" --t-max-prompt-length 640"
-    OPTS+=" --t-max-length 640"
+    OPTS+=" --max-prompt-length 512"
+    OPTS+=" --t-max-prompt-length 768"
+    OPTS+=" --t-max-length 768"
     # runtime
     OPTS+=" --do-train"
     OPTS+=" --do-valid"

@@ -163,46 +163,7 @@ def prepare_dataset(args, tokenizer):
     return data
 
 
-def pt_loss(args, model, model_batch, no_model_batch):
-    loss_mask = (no_model_batch["label"] != -100).int()
-    outputs = model(**model_batch, return_dict=True, use_cache=False)
-    logits = outputs.logits
-    loss_fn = nn.CrossEntropyLoss(ignore_index=-100)
-    lm_loss = loss_fn(logits.view(-1, logits.size(-1)), no_model_batch["label"].view(-1))
-    return lm_loss
-
-
-def count_unique_responses_dataset(dataset, model_type="qwen"):
-    """Count unique response token sequences in a training dataset.
-
-    Uses the sentinel marker (4294967295 for qwen, 65535 otherwise) to find
-    where the prompt ends and the response begins.
-    """
-    patterns = set()
-    sentinel = 4294967295 if model_type in ["qwen"] else 65535
-    for idx in range(len(dataset)):
-        raw = dataset[idx]
-        input_ids = raw["input_ids"]
-        if isinstance(input_ids, np.ndarray):
-            input_ids = input_ids.astype(np.int64)
-        else:
-            input_ids = np.array(input_ids, dtype=np.int64)
-        markers = np.where(input_ids == sentinel)[0]
-        if len(markers) > 0:
-            source_len = markers[0]
-            # Response tokens start after source_len (sentinel is removed in _process_lm)
-            resp_tokens = np.concatenate([input_ids[:source_len], input_ids[source_len + 1:]])
-            resp_tokens = resp_tokens[source_len:]
-        else:
-            resp_tokens = input_ids[1:]  # fallback: everything after first token
-        # Trim to max_length
-        max_len = getattr(dataset, 'max_length', len(resp_tokens))
-        resp_tokens = resp_tokens[:max_len - source_len if len(markers) > 0 else max_len]
-        patterns.add(tuple(resp_tokens.tolist()))
-    return len(patterns)
-
-
-def get_distil_loss(args, tokenizer, model, teacher_model, model_batch, no_model_batch, logits):
+def get_distil_loss(args, teacher_model, model_batch, no_model_batch, logits):
     """Distillation loss from an external teacher model (for KD training types)."""
     with torch.no_grad():
         teacher_model.eval()
@@ -226,48 +187,6 @@ def get_distil_loss(args, tokenizer, model, teacher_model, model_batch, no_model
         else:
             raise NotImplementedError
     return distil_loss
-
-
-def get_teacher_lm_loss(args, tokenizer, model, teacher_model, model_batch):
-    with torch.no_grad():
-        t_gen_out = teacher_model.generate(
-            **model_batch,
-            pad_token_id=tokenizer.pad_token_id,
-            eos_token_id=tokenizer.eos_token_id,
-            max_length=args.max_length,
-            top_k=0,
-            top_p=1,
-            temperature=1.0,
-            do_sample=True,
-            return_dict_in_generate=True,
-            output_scores=False)
-    
-    full_ids = t_gen_out.sequences
-    
-    input_ids = full_ids[:, :-1]
-    mask = (input_ids != tokenizer.pad_token_id).long()
-    labels = full_ids[:, 1:]    
-    labels = torch.masked_fill(labels, mask==0, -100)
-    labels[:, :model_batch["input_ids"].size(1)-1] = -100
-    loss_mask = (labels != -100).float()
-    
-    new_batch = {
-        "input_ids": input_ids,
-        "attention_mask": mask,
-    }
-    
-    if args.model_type in ["gpt2"]:
-        position_ids = torch.cumsum(mask, dim=-1) - 1
-        position_ids = torch.masked_fill(position_ids, mask==0, 0)    
-        new_batch["position_ids"] = position_ids    
-    
-    loss_fn = nn.CrossEntropyLoss(ignore_index=-100)
-
-    outputs = model(**new_batch, return_dict=True, use_cache=False)
-    logits = outputs.logits
-    lm_loss = loss_fn(logits.view(-1, logits.size(-1)), labels.view(-1))
-
-    return lm_loss
 
 
 def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, optimizer: AdamW, lr_scheduler, dataset, device, teacher_model=None):
@@ -314,17 +233,6 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
         for it, (model_batch, no_model_batch, gen_data, _, _) in enumerate(train_dataloader):
             dataset["train"].move_to_device(model_batch, no_model_batch, gen_data, device)
 
-            if args.lm_data_dir is not None:
-                try:
-                    pt_model_batch, pt_no_model_batch, pt_gen_data = next(pt_train_iter)
-                    # pt_model_batch, pt_no_model_batch, pt_gen_data = pt_train_iter.next()
-                except:
-                    pt_train_iter = iter(pt_train_dataloader)
-                    # pt_model_batch, pt_no_model_batch, pt_gen_data = pt_train_iter.next()
-                    pt_model_batch, pt_no_model_batch, pt_gen_data = next(pt_train_iter)
-                    
-                dataset["pt_train"].move_to_device(pt_model_batch, pt_no_model_batch, pt_gen_data, device)
-            
             torch.cuda.synchronize()
             st_time = time.time()
 
@@ -339,15 +247,11 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
             # Distillation: prefer external teacher, fall back to old-model snapshot
             distil_teacher = teacher_model if teacher_model is not None else old_model_module
             if distil_teacher is not None:
-                distil_loss = get_distil_loss(args, tokenizer, model, distil_teacher, model_batch, no_model_batch, logits)
+                distil_loss = get_distil_loss(args, distil_teacher, model_batch, no_model_batch, logits)
                 loss = (1 - args.kd_ratio) * lm_loss + args.kd_ratio * distil_loss
             else:
                 loss = lm_loss
-
-            if args.lm_data_dir is not None:
-                assert args.lm_coef is not None
-                loss += args.lm_coef * pt_loss(args, model, pt_model_batch, pt_no_model_batch)
-                
+  
             model.backward(loss)
             model.step()
              

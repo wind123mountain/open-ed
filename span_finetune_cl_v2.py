@@ -17,6 +17,7 @@ import json
 from tqdm import tqdm
 import math
 import datetime
+from torch.nn.utils.rnn import pad_sequence
 
 from transformers import (
     AutoModelForCausalLM,
@@ -466,8 +467,7 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
     total_loss, total_distil_loss, total_time = 0.0, 0.0, 0.0
     
     adaptive_threshold = args.init_threshold if "adaptive" in args.type else -1.0
-    # prev_avg_loss = evaluate(args, tokenizer, model, dataset["dev"], "dev", 0, device, adaptive_threshold)
-    prev_avg_loss = 0.0
+    prev_avg_loss = evaluate(args, tokenizer, model, dataset["dev"], "dev", 0, device, adaptive_threshold)
     cl_task_id = getattr(args, "cl_task_id", 0)
     old_model_module = None
     if cl_task_id >= 1 and getattr(args, "cl_distill_coef", 0.0) > 0:
@@ -539,21 +539,60 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
                     final_student_mask = student_mask & (s_valid_cumsum <= min_lengths)
                     final_teacher_mask = teacher_mask & (t_valid_cumsum <= min_lengths)
 
-                    logits = logits[final_student_mask]
-                    teacher_logits = teacher_outputs.logits[final_teacher_mask]
-                    new_no_model_batch = {"label": no_model_batch["label"][final_student_mask]} 
-                    
+                    batch_size = logits.size(0)
+
+                    valid_logits_list = []
+                    valid_teacher_logits_list = []
+                    valid_labels_list = []
+                    valid_offsets_list = []
+
+                    for i in range(batch_size):
+                        valid_logits_list.append(logits[i][final_student_mask[i]]) 
+                        valid_teacher_logits_list.append(teacher_outputs.logits[i][final_teacher_mask[i]])
+                        valid_labels_list.append(no_model_batch["label"][i][final_student_mask[i]])
+                        valid_offsets_list.append(no_model_batch["offset_mapping"][i][final_student_mask[i]])
+
+                    logits = pad_sequence(valid_logits_list, batch_first=True, padding_value=0.0)
+                    teacher_logits = pad_sequence(valid_teacher_logits_list, batch_first=True, padding_value=0.0)
+                    padded_labels = pad_sequence(valid_labels_list, batch_first=True, padding_value=-100)
+                    padded_offsets = pad_sequence(valid_offsets_list, batch_first=True, padding_value=0)
+
+                    new_no_model_batch = {
+                        "label": padded_labels,
+                        "offset_mapping": padded_offsets
+                    }
+
+                    def pad_all_layers(hidden_states_tuple, mask, layer_mappings):
+                        padded_layers = []
+                        for i, layer_hidden in enumerate(hidden_states_tuple):
+                            if i in layer_mappings:
+                                valid_layer_list = []
+                                for i in range(batch_size):
+                                    valid_layer_list.append(layer_hidden[i][mask[i]])
+                                
+                                padded_layer = pad_sequence(valid_layer_list, batch_first=True, padding_value=0.0)
+                                padded_layers.append(padded_layer)
+                            else:
+                                padded_layers.append(None)
+                            
+                        return padded_layers
+
+                    student_hidden_states = pad_all_layers(student_captured_hidden, final_student_mask, args.student_layer_mapping)
+                    teacher_hidden_states = pad_all_layers(teacher_outputs.hidden_states, final_teacher_mask, args.teacher_layer_mapping)
                 else:
                     teacher_logits = teacher_outputs.logits
-                    new_no_model_batch = {"label": no_model_batch["label"]} 
+                    new_no_model_batch = {"label": no_model_batch["label"], 
+                                          "offset_mapping": no_model_batch["offset_mapping"]} 
+                    student_hidden_states = student_captured_hidden
+                    teacher_hidden_states = teacher_outputs.hidden_states
 
                 distil_loss = get_distil_loss(args, teacher_logits, new_no_model_batch, logits)
 
                 spans_offsets = no_model_batch["span_offsets"]
-                offset_mapping = no_model_batch["offset_mapping"]
+                offset_mapping = new_no_model_batch["offset_mapping"]
 
-                span_loss = compute_overall_span_loss(model_batch['attention_mask'], t_model_batch['attention_mask'],
-                                                      student_captured_hidden, teacher_outputs.hidden_states, 
+                span_loss = compute_overall_span_loss((new_no_model_batch["label"] != -100).long(),
+                                                      student_hidden_states, teacher_hidden_states, 
                                                       offset_mapping, spans_offsets, args)
                 span_loss = args.w_span_loss * span_loss
                 distil_loss = distil_loss + span_loss

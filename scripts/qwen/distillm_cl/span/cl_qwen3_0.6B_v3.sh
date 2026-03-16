@@ -20,12 +20,12 @@ CKPT="Qwen/Qwen3-0.6B"
 BATCH_SIZE=4
 LR=0.0001
 GRAD_ACC=4
-EVAL_BATCH_SIZE=64
+EVAL_BATCH_SIZE=32
 EPOCHS=3
 # length
 MAX_LENGTH=640
 # runtime
-SAVE_PATH="${BASE_PATH}/results/qwen3/v3/${data}_${perm}_0.6B_cl"
+SAVE_PATH="${BASE_PATH}/results/qwen3/span_v3/${data}_${perm}_0.6B_cl"
 # seed
 SEED=42
 
@@ -122,11 +122,15 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
     OPTS+=" --top-p 0.95"
     OPTS+=" --temperature 0.5"
 
+    OPTS+=" --teacher_layer_mapping 22 25 28"
+    OPTS+=" --student_layer_mapping 22 25 28"
+    OPTS+=" --w-span-loss 1.0"
+
     export NCCL_DEBUG=""
     export WANDB_DISABLED=True
     export TF_CPP_MIN_LOG_LEVEL=3
     export PYTHONPATH=${BASE_PATH}
-    CMD="torchrun ${DISTRIBUTED_ARGS} ${BASE_PATH}/finetune_v2.py ${OPTS}"
+    CMD="torchrun ${DISTRIBUTED_ARGS} ${BASE_PATH}/span_finetune_cl_v2.py ${OPTS}"
 
     echo "=============================="
     echo "Task ${TASK_ID} / $((NUM_TASKS - 1))"

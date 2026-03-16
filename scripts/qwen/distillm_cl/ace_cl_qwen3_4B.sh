@@ -1,9 +1,5 @@
 #! /bin/bash
 
-data=$1
-perm=$2
-
-
 GPUS=(0 1)
 export CUDA_VISIBLE_DEVICES=$(IFS=,; echo "${GPUS[*]}")
 
@@ -14,18 +10,18 @@ GPUS_PER_NODE=${#GPUS[@]}
 
 # model
 BASE_PATH=.
-CKPT_NAME="qwen3-0.6B"
-CKPT="Qwen/Qwen3-0.6B"
+CKPT_NAME="qwen3-4B"
+CKPT="Qwen/Qwen3-4B-Instruct-2507"
 # hp
-BATCH_SIZE=4
+BATCH_SIZE=1
 LR=0.0001
-GRAD_ACC=4
-EVAL_BATCH_SIZE=64
+GRAD_ACC=16
+EVAL_BATCH_SIZE=32
 EPOCHS=3
 # length
-MAX_LENGTH=640
+MAX_LENGTH=768
 # runtime
-SAVE_PATH="${BASE_PATH}/results/qwen3/v3/${data}_${perm}_0.6B_cl"
+SAVE_PATH="${BASE_PATH}/results/qwen3/sft_4B_cl_v2"
 # seed
 SEED=42
 
@@ -57,7 +53,7 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
                       --master_addr $MASTER_ADDR \
                       --master_port $MASTER_PORT"
 
-    DATA_DIR="${BASE_PATH}/processed_data/${data}_v3_${perm}/${TASK_ID}/qwen/"
+    DATA_DIR="${BASE_PATH}/processed_data/ace_v2/${TASK_ID}/qwen/"
 
     OPTS=""
     # model
@@ -84,9 +80,7 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
     OPTS+=" --epochs ${EPOCHS}"
     # length
     OPTS+=" --max-length ${MAX_LENGTH}"
-    OPTS+=" --max-prompt-length 512"
-    OPTS+=" --t-max-prompt-length 768"
-    OPTS+=" --t-max-length 768"
+    OPTS+=" --max-prompt-length 460"
     # runtime
     OPTS+=" --do-train"
     OPTS+=" --do-valid"
@@ -97,13 +91,13 @@ for TASK_ID in $(seq ${START_TASK} $((NUM_TASKS - 1))); do
     OPTS+=" --log-interval 10"
     OPTS+=" --mid-log-num -1"
     OPTS+=" --save ${SAVE_PATH}/${TASK_ID}"
-    OPTS+=" --kd-ratio 1.0"
+    OPTS+=" --kd-ratio 0.3"
     # seed
     OPTS+=" --seed ${SEED}"
     # lora
     OPTS+=" --peft lora"
-    OPTS+=" --peft-lora-r 64"
-    OPTS+=" --peft-lora-alpha 128"
+    OPTS+=" --peft-lora-r 16"
+    OPTS+=" --peft-lora-alpha 64"
     OPTS+=" --peft-lora-dropout 0.1"
     if [ -n "${CURRENT_PEFT_PATH}" ]; then
         OPTS+=" --peft-path ${CURRENT_PEFT_PATH}"
