@@ -24,6 +24,7 @@ def main():
     parser.add_argument("--model_type", type=str, default="qwen")
     parser.add_argument("--data_dir", type=str, default='processed_data/ace/qwen/')
     parser.add_argument("--dataset_name", type=str, default='ace')
+    parser.add_argument("--split", type=str, default='test')
 
     args = parser.parse_args()
 
@@ -58,7 +59,7 @@ def main():
             data_dir=args.data_dir,
             dataset_name=args.dataset_name,            
             batch_size=args.val_batch_size, 
-            max_length=1024, max_prompt_length=512, split="test"
+            max_length=1024, max_prompt_length=512, split=args.split
         )
 
     with open(args.output_dir + f"/{args.dataset_name}_eval.json", "w", encoding="utf-8") as f:
