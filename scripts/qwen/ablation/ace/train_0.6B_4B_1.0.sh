@@ -32,7 +32,7 @@ EPOCHS=5
 # length
 MAX_LENGTH=768
 # runtime
-SAVE_PATH="${BASE_PATH}/results/qwen3/ablation/0.6B_4B_ace_w_0.5"
+SAVE_PATH="${BASE_PATH}/results/qwen3/ablation/0.6B_4B_ace_w_1.0"
 # seed
 SEED=42
 
