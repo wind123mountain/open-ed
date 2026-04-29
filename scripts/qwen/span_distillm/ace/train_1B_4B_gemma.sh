@@ -17,12 +17,12 @@ DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE \
 
 # model
 BASE_PATH=.
-CKPT_NAME="llama3.2-1B"
-CKPT="meta-llama/Llama-3.2-1B-Instruct"
-TEACHER_CKPT_NAME="llama3.2-3B"
-TEACHER_CKPT="meta-llama/Llama-3.2-3B-Instruct"
+CKPT_NAME="gemma3-1B"
+CKPT="google/gemma-3-1b-it"
+TEACHER_CKPT_NAME="gemma3-4B"
+TEACHER_CKPT="google/gemma-3-4b-it"
 # data
-DATA_DIR="${BASE_PATH}/processed_data/ace/llama/"
+DATA_DIR="${BASE_PATH}/processed_data/ace/gemma/"
 # hp
 BATCH_SIZE=2
 LR=0.0002
@@ -32,7 +32,7 @@ EPOCHS=5
 # length
 MAX_LENGTH=768
 # runtime
-SAVE_PATH="${BASE_PATH}/results/llama/span_distillm/1B_3B_ace_srkl"
+SAVE_PATH="${BASE_PATH}/results/gemma/span_distillm/1B_4B_ace_srkl"
 # seed
 SEED=42
 
@@ -46,8 +46,8 @@ OPTS+=" --ckpt-name ${CKPT_NAME}"
 OPTS+=" --teacher-ckpt-name ${TEACHER_CKPT_NAME}"
 OPTS+=" --teacher-model-fp16"
 # Teacher LoRA path. Override via env: TEACHER_PEFT_PATH=<path> bash <script>
-# Default: latest step under SFT save dir produced by sft_llama_3B_ace.sh.
-DEFAULT_TEACHER_SFT_DIR="${BASE_PATH}/results/llama/sft_3B_ace"
+# Default: latest step under SFT save dir produced by sft_gemma_4B_ace.sh.
+DEFAULT_TEACHER_SFT_DIR="${BASE_PATH}/results/gemma/sft_4B_ace"
 if [ -z "${TEACHER_PEFT_PATH}" ]; then
     TEACHER_PEFT_PATH=$(ls -d ${DEFAULT_TEACHER_SFT_DIR}/e*/[0-9]*/ 2>/dev/null \
         | awk -F/ '{print $0, $(NF-1)}' | sort -k2 -n | tail -1 | awk '{print $1}')
@@ -59,7 +59,7 @@ if [ -z "${TEACHER_PEFT_PATH}" ]; then
 fi
 echo "Using teacher PEFT: ${TEACHER_PEFT_PATH}"
 OPTS+=" --teacher-peft-path ${TEACHER_PEFT_PATH}"
-OPTS+=" --model-type llama"
+OPTS+=" --model-type gemma"
 OPTS+=" --n-gpu ${GPUS_PER_NODE}"
 # data
 OPTS+=" --data-dir ${DATA_DIR}"
@@ -113,10 +113,10 @@ OPTS+=" --peft-lora-r 8"
 OPTS+=" --peft-lora-alpha 64"
 OPTS+=" --peft-lora-dropout 0.1"
 
-# Llama-3.2-3B teacher: 28 transformer layers (hidden_states idx 0..28)
-# Llama-3.2-1B student: 16 transformer layers (hidden_states idx 0..16)
-OPTS+=" --teacher_layer_mapping 22 25 28"
-OPTS+=" --student_layer_mapping 10 13 16"
+# Gemma-3-4B teacher: 34 transformer layers (hidden_states idx 0..34)
+# Gemma-3-1B student: 26 transformer layers (hidden_states idx 0..26)
+OPTS+=" --teacher_layer_mapping 28 31 34"
+OPTS+=" --student_layer_mapping 20 23 26"
 OPTS+=" --w-span-loss 2.0"
 
 
