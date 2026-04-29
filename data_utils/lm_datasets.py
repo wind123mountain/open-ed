@@ -109,9 +109,9 @@ class LMTrainDataset(Dataset):
     def _process_lm(self, i, samp, model_data, no_model_data, gen_data):
         input_ids = samp["input_ids"]
         source_len = 1
-        
+
         prompt = None
-        if self.args.model_type in ["qwen"] and 4294967295 in input_ids:
+        if 4294967295 in input_ids:
             source_len = np.where(input_ids==4294967295)[0][0]
             prompt = input_ids[:source_len]
             input_ids = np.concatenate([input_ids[:source_len], input_ids[source_len+1:]], axis=0)
@@ -119,7 +119,7 @@ class LMTrainDataset(Dataset):
             source_len = np.where(input_ids==65535)[0][0]
             prompt = input_ids[:source_len]
             input_ids = np.concatenate([input_ids[:source_len], input_ids[source_len+1:]], axis=0)
-        
+
         input_ids = input_ids[:self.max_length]
         input_len = len(input_ids)
         model_data["input_ids"][i][:input_len-1] = torch.tensor(input_ids[:-1], dtype=torch.long)
@@ -131,7 +131,7 @@ class LMTrainDataset(Dataset):
         if "loss_mask" in no_model_data:
             no_model_data["loss_mask"][i][:input_len-1] = 1.0
             no_model_data["loss_mask"][i][:source_len-1] = 0
-        
+
         if prompt is not None and gen_data is not None:
             gen_data["input_ids"][i][-len(prompt):] = torch.tensor(prompt, dtype=torch.long)
             gen_data["attention_mask"][i][-len(prompt):] = 1.0
@@ -234,9 +234,9 @@ class LMEvalDataset(Dataset):
     def _process_lm(self, i, samp, model_data, no_model_data, gen_data):
         input_ids = samp["input_ids"]
         source_len = 1
-        
+
         prompt = None
-        if self.args.model_type in ["qwen"] and 4294967295 in input_ids:
+        if 4294967295 in input_ids:
             source_len = np.where(input_ids==4294967295)[0][0]
             prompt = input_ids[:source_len]
             input_ids = np.concatenate([input_ids[:source_len], input_ids[source_len+1:]], axis=0)
@@ -244,7 +244,7 @@ class LMEvalDataset(Dataset):
             source_len = np.where(input_ids==65535)[0][0]
             prompt = input_ids[:source_len]
             input_ids = np.concatenate([input_ids[:source_len], input_ids[source_len+1:]], axis=0)
-        
+
         input_ids = input_ids[:self.max_length]
         input_len = len(input_ids)
         model_data["input_ids"][i][:input_len-1] = torch.tensor(input_ids[:-1], dtype=torch.long)

@@ -209,16 +209,25 @@ def get_optimizer_params_peft(args, model: nn.Module):
     return optimizer_grouped_parameters
 
 
+CHAT_EOS_TOKENS = {
+    "qwen": "<|im_end|>",
+    "llama": "<|eot_id|>",
+    "gemma": "<end_of_turn>",
+}
+
+
 def get_tokenizer(args):
     tokenizer = AutoTokenizer.from_pretrained(args.model_path, padding_side="right")
 
-    if args.model_type == "qwen":
-        tokenizer.eos_token_id = 151645 
+    chat_eos_token = CHAT_EOS_TOKENS.get(args.model_type)
+    if chat_eos_token is not None:
+        eos_id = tokenizer.convert_tokens_to_ids(chat_eos_token)
+        if eos_id is not None and eos_id != tokenizer.unk_token_id:
+            tokenizer.eos_token = chat_eos_token
+            tokenizer.eos_token_id = eos_id
     tokenizer.pad_token_id = tokenizer.eos_token_id
     tokenizer.pad_token = tokenizer.eos_token
-    # print(tokenizer.eos_token_id)
 
-    
     return tokenizer
 
 

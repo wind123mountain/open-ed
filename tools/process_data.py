@@ -83,8 +83,13 @@ def main():
             "test": test_data
         }
     
+    main_tokenizer = AutoTokenizer.from_pretrained(args.model_path)
+    use_uint32 = len(main_tokenizer) > 65535
+    bin_dtype = np.uint32 if use_uint32 else np.uint16
+    print(f"tokenizer vocab size = {len(main_tokenizer)} -> dtype = {bin_dtype.__name__}")
+
     for split in all_data:
-        
+
         # encoder use the tokenizer to encode data
         encoder = Encoder(args)
 
@@ -93,7 +98,7 @@ def main():
         encoded_docs = pool.imap_unordered(encoder.encode, all_data[split], chunksize=50)
         proc_start = time.time()
         total_bytes_processed = 0
-        
+
         bin_file = os.path.join(args.processed_data_dir, f"{split}_{0}.bin")
         idx_file = os.path.join(args.processed_data_dir, f"{split}_{0}.idx")
 
@@ -101,11 +106,8 @@ def main():
         if split == "train":
             t_bin_file = os.path.join(args.processed_data_dir, f"teacher_train_0.bin")
             t_idx_file = os.path.join(args.processed_data_dir, f"teacher_train_0.idx")
-                    
-        if args.model_type!="qwen":
-            binary_builder = make_builder(bin_file, impl="mmap", dtype=np.uint16)
-        else:
-            binary_builder = make_builder(bin_file, impl="mmap", dtype=np.uint32)
+
+        binary_builder = make_builder(bin_file, impl="mmap", dtype=bin_dtype)
 
         # put tokenized data into binary_builder
         inst_num = 0
@@ -129,10 +131,7 @@ def main():
             else:
                 if t_prompt is not None and split == "train":
                     if t_binary_builder is None:
-                        if args.model_type!="qwen":
-                            t_binary_builder = make_builder(t_bin_file, impl="mmap", dtype=np.uint16)
-                        else:
-                            t_binary_builder = make_builder(t_bin_file, impl="mmap", dtype=np.uint32)
+                        t_binary_builder = make_builder(t_bin_file, impl="mmap", dtype=bin_dtype)
                     t_binary_builder.add_item(torch.IntTensor(t_prompt + [-1] + response))
                 
                 binary_builder.add_item(torch.IntTensor(prompt + [-1] + response))

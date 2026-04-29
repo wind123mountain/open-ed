@@ -25,14 +25,14 @@ TEACHER_CKPT="Qwen/Qwen3-4B-Instruct-2507"
 DATA_DIR="${BASE_PATH}/processed_data/maven/qwen/"
 # hp
 BATCH_SIZE=2
-LR=0.0001
+LR=0.0002
 GRAD_ACC=8
 EVAL_BATCH_SIZE=32
 EPOCHS=5
 # length
 MAX_LENGTH=768
 # runtime
-SAVE_PATH="${BASE_PATH}/results/qwen3/distillm_0.6B_4B_maven_csd"
+SAVE_PATH="${BASE_PATH}/results/qwen3/distillm_0.6B_4B_maven_csd_2"
 # seed
 SEED=42
 
