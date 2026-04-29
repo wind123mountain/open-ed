@@ -21,7 +21,7 @@
 # bash scripts/qwen/ablation/ace/kd_ratio/train_0.6B_4B_0.7.sh
 # bash scripts/qwen/ablation/ace/kd_ratio/train_0.6B_4B_1.0.sh
 
-bash scripts/qwen/sft/sft_llama_3B_ace.sh
+# bash scripts/qwen/sft/sft_llama_3B_ace.sh
 bash scripts/qwen/distillm/ace/train_1B_3B_llama.sh
 bash scripts/qwen/distillm/ace/train_1B_3B_llama_csd.sh
 bash scripts/qwen/span_distillm/ace/train_1B_3B_llama.sh
