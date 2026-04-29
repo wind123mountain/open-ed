@@ -21,12 +21,10 @@
 # bash scripts/qwen/ablation/ace/kd_ratio/train_0.6B_4B_0.7.sh
 # bash scripts/qwen/ablation/ace/kd_ratio/train_0.6B_4B_1.0.sh
 
+bash scripts/qwen/sft/sft_llama_3B_ace.sh
 bash scripts/qwen/distillm/ace/train_1B_3B_llama.sh
 bash scripts/qwen/distillm/ace/train_1B_3B_llama_csd.sh
-
-bash scripts/qwen/tools/process_data_geneva.sh
-bash scripts/qwen/sft/geneva/sft_qwen3_4B.sh
-
+bash scripts/qwen/span_distillm/ace/train_1B_3B_llama.sh
 
 # Sweep 5 ratio
 for r in 0.1 0.3 0.5 0.7 1.0; do
