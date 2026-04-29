@@ -1,6 +1,6 @@
 #! /bin/bash
 
-GPUS=(0 1)
+GPUS=(0 1 2 3 4 5 6 7)
 export CUDA_VISIBLE_DEVICES=$(IFS=,; echo "${GPUS[*]}")
 
 MASTER_ADDR=localhost
@@ -26,8 +26,8 @@ DATA_DIR="${BASE_PATH}/processed_data/ace/gemma/"
 # hp
 BATCH_SIZE=2
 LR=0.0002
-GRAD_ACC=8
-EVAL_BATCH_SIZE=32
+GRAD_ACC=1
+EVAL_BATCH_SIZE=64
 EPOCHS=5
 # length
 MAX_LENGTH=768
