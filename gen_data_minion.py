@@ -40,9 +40,31 @@ USER_TEMPLATE = (
     "(from <input>...</input>).\n"
 )
 
+# Event-type descriptions. Required by the span-extraction loss in
+# data_utils/lm_datasets.py:get_span_offsets, which expects each event tuple
+# to be at least 3 elements (trigger, event_type, description) like MAVEN.
+EVENT_TYPE_DESC = {
+    "Business:START-ORG": "A new organization is founded or formally established.",
+    "Conflict:Attack": "A violent or aggressive act directed at a target.",
+    "Conflict:Demonstrate": "A public protest or demonstration is held.",
+    "Contact:Meet": "Two or more parties physically meet or interact.",
+    "Contact:Phone-Write": "Communication occurs via phone, written message, or similar means.",
+    "Justice:Arrest-Jail": "A person is arrested or jailed by authorities.",
+    "Life:Be-Born": "A person is born.",
+    "Life:Die": "A person dies, naturally or due to violence.",
+    "Life:Divorce": "A formal divorce or separation occurs between people.",
+    "Life:Injure": "A person is injured or physically harmed.",
+    "Life:Marry": "A marriage or formal union takes place.",
+    "Movement:Transport": "A person or thing is moved or transported from one location to another.",
+    "Personnel:End-Position": "A person leaves or is removed from a position or role.",
+    "Personnel:Start-Position": "A person begins a new position or role.",
+    "Transaction:Transfer-Money": "Money or financial value is transferred between parties.",
+    "Transaction:Transfer-Ownership": "Ownership of an asset is transferred between parties.",
+}
+
 
 def parse_bio(tokens, labels):
-    """Extract list of [trigger_text, event_type] from BIO labels."""
+    """Extract list of [trigger_text, event_type, description] from BIO labels."""
     events = []
     i = 0
     while i < len(labels):
@@ -53,7 +75,9 @@ def parse_bio(tokens, labels):
             while j < len(labels) and labels[j] == "I_" + event_type:
                 j += 1
             trigger = " ".join(tokens[i:j])
-            events.append([trigger, event_type])
+            description = EVENT_TYPE_DESC.get(
+                event_type, f"An event of type {event_type}.")
+            events.append([trigger, event_type, description])
             i = j
         else:
             i += 1

@@ -1,14 +1,7 @@
 #! /bin/bash
-# EventKD distillation Qwen3-4B (teacher) -> Qwen3-0.6B (student) on MINION (single language).
-# Usage:  bash scripts/qwen/span_distillm/minion/train_0.6B_4B_minion.sh <lang> <teacher_peft_relpath>
-# Example:
-#   bash scripts/qwen/span_distillm/minion/train_0.6B_4B_minion.sh spanish \
-#       results/qwen3/sft_4B_minion_spanish/e3-bs2-lr0.0001-G8-N2-NN1-lora-32-64-0.1/<step>
+# EventKD distillation Qwen3-4B (teacher) -> Qwen3-0.6B (student) on MINION Spanish.
 
 set -e
-
-LANG_NAME="${1:?usage: $0 <lang> <teacher_peft_path>}"
-TEACHER_PEFT_PATH="${2:?usage: $0 <lang> <teacher_peft_path>}"
 
 GPUS=(0 1)
 export CUDA_VISIBLE_DEVICES=$(IFS=,; echo "${GPUS[*]}")
@@ -32,7 +25,7 @@ CKPT="Qwen/Qwen3-0.6B"
 TEACHER_CKPT_NAME="qwen3-4B"
 TEACHER_CKPT="Qwen/Qwen3-4B-Instruct-2507"
 # data
-DATA_DIR="${BASE_PATH}/processed_data/minion_${LANG_NAME}/qwen/"
+DATA_DIR="${BASE_PATH}/processed_data/minion_spanish/qwen/"
 # hp
 BATCH_SIZE=2
 LR=0.0001
@@ -42,7 +35,7 @@ EPOCHS=5
 # length
 MAX_LENGTH=768
 # runtime
-SAVE_PATH="${BASE_PATH}/results/qwen3/span_distillm/0.6B_4B_minion_${LANG_NAME}_sfkl"
+SAVE_PATH="${BASE_PATH}/results/qwen3/span_distillm/0.6B_4B_minion_spanish_sfkl"
 # seed
 SEED=42
 
@@ -55,7 +48,7 @@ OPTS+=" --teacher-model-path ${TEACHER_CKPT}"
 OPTS+=" --ckpt-name ${CKPT_NAME}"
 OPTS+=" --teacher-ckpt-name ${TEACHER_CKPT_NAME}"
 OPTS+=" --teacher-model-fp16"
-OPTS+=" --teacher-peft-path ${TEACHER_PEFT_PATH}"
+OPTS+=" --teacher-peft-path results/qwen3/sft_4B_minion_spanish/e3-bs2-lr0.0001-G8-N2-NN1-lora-32-64-0.1/246"
 OPTS+=" --model-type qwen"
 OPTS+=" --n-gpu ${GPUS_PER_NODE}"
 # data

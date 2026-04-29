@@ -30,3 +30,24 @@ bash scripts/qwen/span_distillm/ace/train_1B_3B_llama.sh
 for r in 0.1 0.3 0.5 0.7 1.0; do
     bash scripts/qwen/ablation/geneva/kd_ratio/train_0.6B_4B_${r}.sh
 done
+
+
+# (a) Convert MINION raw BIO → EventKD JSON format
+python3 gen_data_minion.py --lang all
+
+# (b) Tokenize per language với Qwen3 tokenizer
+bash scripts/qwen/tools/process_data_minion.sh spanish
+bash scripts/qwen/tools/process_data_minion.sh portuguese
+
+# (c) SFT teacher (4B) + student baseline (0.6B) per language
+bash scripts/qwen/sft/minion/sft_qwen3_4B_minion.sh spanish
+bash scripts/qwen/sft/minion/sft_qwen3_0.6B_minion.sh spanish
+bash scripts/qwen/sft/minion/sft_qwen3_4B_minion.sh portuguese
+bash scripts/qwen/sft/minion/sft_qwen3_0.6B_minion.sh portuguese
+
+# (d) EventKD distill per language
+#     LƯU Ý: 2 script này hardcode step number của teacher PEFT (246 / 114).
+#     Sau khi (c) chạy xong, verify: ls results/qwen3/sft_4B_minion_<lang>/e3-*/
+#     Nếu step thực ≠ 246 (spanish) hoặc 114 (portuguese) thì sửa giá trị hardcode trong script.
+bash scripts/qwen/span_distillm/minion/train_0.6B_4B_minion_spanish.sh
+bash scripts/qwen/span_distillm/minion/train_0.6B_4B_minion_portuguese.sh
