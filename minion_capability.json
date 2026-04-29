@@ -1,0 +1,464 @@
+{
+  "english": {
+    "metrics": {
+      "n": 30,
+      "json_valid_pct": 96.66666666666667,
+      "avg_events_per_sample": 1.4,
+      "trigger_in_input_pct": 92.85714285714286,
+      "schema_valid_pct": 100.0,
+      "avg_trigger_words": 1.0,
+      "single_word_pct": 100.0
+    },
+    "elapsed_s": 21.774302005767822,
+    "samples": [
+      {
+        "text": "Norman Cafik Norman Augustine Cafik , ( December 29 , 1928 – September 30 , 2016 ) was a Canadian politician . Born in Toronto , Ontario of a Ukrainian - Polish father and a Scottish - Irish mother , ",
+        "raw": "{\"events\": [[\"born\", \"Life:Be-Born\"], [\"elected\", \"Personnel:Start-Position\"]]}",
+        "parsed": [
+          [
+            "born",
+            "Life:Be-Born"
+          ],
+          [
+            "elected",
+            "Personnel:Start-Position"
+          ]
+        ]
+      },
+      {
+        "text": "The senior line of the first creation was elevated to the peerage as Baron Delamer and Earl of Warrington . History . The Booth Baronetcy , of Dunham Massey in the County of Chester , was created in t",
+        "raw": "{\"events\": [[\"elevated\", \"Personnel:Start-Position\"], [\"created\", \"Transaction:Transfer-Ownership\"], [\"raised\", \"Personnel:Start-Position\"]]}",
+        "parsed": [
+          [
+            "elevated",
+            "Personnel:Start-Position"
+          ],
+          [
+            "created",
+            "Transaction:Transfer-Ownership"
+          ],
+          [
+            "raised",
+            "Personnel:Start-Position"
+          ]
+        ]
+      },
+      {
+        "text": "With 569 beds , the General Campus includes The Ottawa Hospital Rehabilitation Centre and the Cancer Centre . The Ottawa General Hospital opened in 1845 at the current site of the Élisabeth Bruyère Ho",
+        "raw": "{\"events\": []}",
+        "parsed": []
+      }
+    ]
+  },
+  "spanish": {
+    "metrics": {
+      "n": 30,
+      "json_valid_pct": 100.0,
+      "avg_events_per_sample": 2.466666666666667,
+      "trigger_in_input_pct": 98.64864864864865,
+      "schema_valid_pct": 100.0,
+      "avg_trigger_words": 1.1216216216216217,
+      "single_word_pct": 90.54054054054055
+    },
+    "elapsed_s": 30.496040105819702,
+    "samples": [
+      {
+        "text": "Dennis Eckert Dennis-Yerai Eckert Ayensa , más conocido como Dennis Eckert ( Bonn , 9 de enero de 1997 ) es un futbolista hispano-alemán , de madre tudense y padre germano , que juega de delantero en ",
+        "raw": "{\"events\": [[\"juega\", \"Personnel:Start-Position\"], [\"abandonaría\", \"Personnel:End-Position\"]]}",
+        "parsed": [
+          [
+            "juega",
+            "Personnel:Start-Position"
+          ],
+          [
+            "abandonaría",
+            "Personnel:End-Position"
+          ]
+        ]
+      },
+      {
+        "text": "Marie-Magdeleine-Euphrasie Hugon ( Loudes , 10 de abril de 1828 - Lyon , 17 de marzo de 1900 ) , conocida también por su nombre religioso María Serafia , fue una religiosa católica francesa , trinitar",
+        "raw": "{\"events\": [[\"nació\", \"Life:Be-Born\"], [\"ingresó\", \"Personnel:Start-Position\"]]}",
+        "parsed": [
+          [
+            "nació",
+            "Life:Be-Born"
+          ],
+          [
+            "ingresó",
+            "Personnel:Start-Position"
+          ]
+        ]
+      },
+      {
+        "text": "En 1977 , Prats ganó el primer premio en el Concurso Long-Thibaud-Crespin en Francia . Más tarde estudió con Rudolf Kehrer en Moscú , Magda Tagliaferro en París , Paul Badura-Skoda en Viena y Witold M",
+        "raw": "{\"events\": [[\"ganó\", \"Transaction:Transfer-Ownership\"], [\"estudió\", \"Contact:Meet\"], [\"se le otorgaron\", \"Justice:Arrest-Jail\"], [\"fue\", \"Personnel:Start-Position\"], [\"dejó\", \"Movement:Transport\"]]}",
+        "parsed": [
+          [
+            "ganó",
+            "Transaction:Transfer-Ownership"
+          ],
+          [
+            "estudió",
+            "Contact:Meet"
+          ],
+          [
+            "se le otorgaron",
+            "Justice:Arrest-Jail"
+          ],
+          [
+            "fue",
+            "Personnel:Start-Position"
+          ],
+          [
+            "dejó",
+            "Movement:Transport"
+          ]
+        ]
+      }
+    ]
+  },
+  "hindi": {
+    "metrics": {
+      "n": 30,
+      "json_valid_pct": 93.33333333333333,
+      "avg_events_per_sample": 0.8333333333333334,
+      "trigger_in_input_pct": 60.0,
+      "schema_valid_pct": 100.0,
+      "avg_trigger_words": 1.0,
+      "single_word_pct": 100.0
+    },
+    "elapsed_s": 48.22242093086243,
+    "samples": [
+      {
+        "text": "अफगानिस्तान में बौद्ध धर्म अफगानिस्तान में बौद्ध धर्म इस्लामिक युग से पहले इस क्षेत्र की प्रमुख धार्मिक शक्तियों में से एक था । हिंदू कुश पर्वत के दक्षिण में यह धर्म व्यापक रूप से फैला हुआ था । बौद्ध ",
+        "raw": "{\"events\": []}",
+        "parsed": []
+      },
+      {
+        "text": "उनके प्रदर्शन के अलावा , फिल्म के अन्य उत्पादन तत्वों और चित्रांकन , पृष्ठभूमि स्कोर और विशेष प्रभाव वाले कार्यों की भी आलोचकों और दर्शकों द्वारा प्रशंसा की गई । फिल्म के कथानक और कथानक को 2013 में रि",
+        "raw": "{\"events\": []}",
+        "parsed": []
+      },
+      {
+        "text": "विक्टोरिया सीक्रेट ने अपने पहले साल के कारोबार में $ 500,000 की कमाई की , एक मुख्यालय और गोदाम से चार नए स्टोर स्थानों और एक मेल - ऑर्डर ऑपरेशन के विस्तार को वित्त करने के लिए पर्याप्त । 1982 तक , 395",
+        "raw": "{\"events\": [[\"कमाई\", \"Transaction:Transfer-Money\"], [\"जोड़ा\", \"Movement:Transport\"], [\"चला\", \"Movement:Transport\"]]}",
+        "parsed": [
+          [
+            "कमाई",
+            "Transaction:Transfer-Money"
+          ],
+          [
+            "जोड़ा",
+            "Movement:Transport"
+          ],
+          [
+            "चला",
+            "Movement:Transport"
+          ]
+        ]
+      }
+    ]
+  },
+  "portuguese": {
+    "metrics": {
+      "n": 30,
+      "json_valid_pct": 100.0,
+      "avg_events_per_sample": 1.9,
+      "trigger_in_input_pct": 84.21052631578948,
+      "schema_valid_pct": 100.0,
+      "avg_trigger_words": 1.0350877192982457,
+      "single_word_pct": 96.49122807017544
+    },
+    "elapsed_s": 22.041152477264404,
+    "samples": [
+      {
+        "text": "Elsa ordena que os guardas abram as portões e Anna alegremente caminha por uma calçada na cidade . A canção termina com Anna trombando com o cavalo de Hans . Na reprise , Anna chega ao palácio de gelo",
+        "raw": "{\"events\": [[\"abram\", \"Movement:Transport\"], [\"caminha\", \"Movement:Transport\"], [\"trombando\", \"Life:Injure\"], [\"chega\", \"Movement:Transport\"], [\"recusa\", \"Personnel:End-Position\"]]}",
+        "parsed": [
+          [
+            "abram",
+            "Movement:Transport"
+          ],
+          [
+            "caminha",
+            "Movement:Transport"
+          ],
+          [
+            "trombando",
+            "Life:Injure"
+          ],
+          [
+            "chega",
+            "Movement:Transport"
+          ],
+          [
+            "recusa",
+            "Personnel:End-Position"
+          ]
+        ]
+      },
+      {
+        "text": "Paulo Preto Paulo Vieira de Souza , também conhecido como Paulo Preto , é ex-diretor da empresa paulista de infraestrutura rodoviária ( DERSA ) e é apontado como operador do PSDB pela Polícia Federal ",
+        "raw": "{\"events\": [[\"ex-diretor\", \"Personnel:End-Position\"], [\"foi ex-diretor\", \"Personnel:End-Position\"], [\"esteve envolvido\", \"Contact:Meet\"], [\"ligado\", \"Contact:Meet\"]]}",
+        "parsed": [
+          [
+            "ex-diretor",
+            "Personnel:End-Position"
+          ],
+          [
+            "foi ex-diretor",
+            "Personnel:End-Position"
+          ],
+          [
+            "esteve envolvido",
+            "Contact:Meet"
+          ],
+          [
+            "ligado",
+            "Contact:Meet"
+          ]
+        ]
+      },
+      {
+        "text": "Hughes Communications Hughes Communications é um provedor de serviços de comunicações por satélite . A empresa opera seus negócios via satélite por meio de sua subsidiária integral , HughesNet . Em 20",
+        "raw": "{\"events\": [[\"acquired\", \"Transaction:Transfer-Ownership\"]]}",
+        "parsed": [
+          [
+            "acquired",
+            "Transaction:Transfer-Ownership"
+          ]
+        ]
+      }
+    ]
+  },
+  "korean": {
+    "metrics": {
+      "n": 30,
+      "json_valid_pct": 100.0,
+      "avg_events_per_sample": 1.3,
+      "trigger_in_input_pct": 89.74358974358974,
+      "schema_valid_pct": 100.0,
+      "avg_trigger_words": 1.0512820512820513,
+      "single_word_pct": 94.87179487179488
+    },
+    "elapsed_s": 19.52347493171692,
+    "samples": [
+      {
+        "text": "매리 수랏 매리 엘리자베스 젠킨스 수랏 ( Mary Elizabeth Jenkins Surratt , 1820년 또는 1823년 5월 ~ 1865년 7월 7일 ) 은 링컨 대통령 암살 사건에 가담한 하숙집 주인이다 . 사형 선고를 받고 , 교수형에 처해져 미국 연방 정부에 의해 처형된 최초의 여성이다 .",
+        "raw": "{\"events\": [[\"surratt\", \"Life:Die\"]]}",
+        "parsed": [
+          [
+            "surratt",
+            "Life:Die"
+          ]
+        ]
+      },
+      {
+        "text": "포클랜드 전쟁의 영국 해군력 포클랜드 전쟁의 영국 해군력은 1982년 포클랜드 전쟁에 참가한 영국의 모든 해군전력에 대한 목록이다 . 개요 .",
+        "raw": "{\"events\": []}",
+        "parsed": []
+      },
+      {
+        "text": "슈퍼 마리오 브라더스에서 처음 등장했다 . 거북이의 모습을 하고 있으며 신발을 신고 있다 . 등장 . 마리오 브라더스에 처음으로 출연한다 . 마리오 브라더스에서는 밑바닥을 치거나 pow블록을 쳐서 엉금 엉금을 차면 엉금 엉금이 죽는다 .",
+        "raw": "{\"events\": [[\"등장\", \"Life:Be-Born\"]]}`",
+        "parsed": [
+          [
+            "등장",
+            "Life:Be-Born"
+          ]
+        ]
+      }
+    ]
+  },
+  "japanese": {
+    "metrics": {
+      "n": 30,
+      "json_valid_pct": 100.0,
+      "avg_events_per_sample": 1.3666666666666667,
+      "trigger_in_input_pct": 87.8048780487805,
+      "schema_valid_pct": 100.0,
+      "avg_trigger_words": 1.0,
+      "single_word_pct": 100.0
+    },
+    "elapsed_s": 24.142785787582397,
+    "samples": [
+      {
+        "text": "井上 満郎 （ いのう え みつお 、 1940 年 12月 5 日 - ） は 、 日本 の 歴史学者 、 京都産業大学 名誉教授 。 専攻 は 日本 古代史 。 渡来人 ・ 渡来 文化 や 、 平安京 について 文献 史料 や 考古 資料 を 分析 し 、 庶民 の 生活 文化 の 観点 から 実像 に 迫る 研究 を 続ける 。 来歴 . 京都市 生まれ 。 1964 年 京都大学 文学 部",
+        "raw": "{\"events\": [[\"卒\", \"Life:Be-Born\"], [\"退学\", \"Personnel:End-Position\"], [\"講師\", \"Personnel:Start-Position\"], [\"助教授\", \"Personnel:Start-Position\"], [\"教授\", \"Personnel:Start-Position\"], [\"所長\", \"Personnel:Start-Position\"], [\"館長\", \"Personnel:Start-Position\"], [\"名誉教授\", \"Personnel:Start-Position\"]]}",
+        "parsed": [
+          [
+            "卒",
+            "Life:Be-Born"
+          ],
+          [
+            "退学",
+            "Personnel:End-Position"
+          ],
+          [
+            "講師",
+            "Personnel:Start-Position"
+          ],
+          [
+            "助教授",
+            "Personnel:Start-Position"
+          ],
+          [
+            "教授",
+            "Personnel:Start-Position"
+          ],
+          [
+            "所長",
+            "Personnel:Start-Position"
+          ],
+          [
+            "館長",
+            "Personnel:Start-Position"
+          ],
+          [
+            "名誉教授",
+            "Personnel:Start-Position"
+          ]
+        ]
+      },
+      {
+        "text": "ジョビー ・ カツマタ ジョビー ・ カツマタ （ Jovy Katsumata 、 1994 年 1月 25 日 - ） は 、 フィリピン の プロボクサー 。 本名 は Jovylito Abe Aligarbes 。 北ラナオ州 出身 。",
+        "raw": "{\"events\": []}",
+        "parsed": []
+      },
+      {
+        "text": "右投 左打 。 MLB の タンパベイ ・ レイズ 所属 。 経歴 . プロ 入り と マリナーズ 傘下 時代 . 、 シアトル ・ マリナーズ と 契約 。 ルーキー 級 アリゾナリーグ ・ マリナーズ と A+ 級 ハイデザート ・ マーベリックス で プレー 。 アリゾナリーグ で は 8月 31 日 に MVP を 獲得 し た 。",
+        "raw": "{\"events\": [[\"所属\", \"Personnel:Start-Position\"], [\"契約\", \"Transaction:Transfer-Ownership\"], [\"獲得\", \"Life:Be-Born\"]]}",
+        "parsed": [
+          [
+            "所属",
+            "Personnel:Start-Position"
+          ],
+          [
+            "契約",
+            "Transaction:Transfer-Ownership"
+          ],
+          [
+            "獲得",
+            "Life:Be-Born"
+          ]
+        ]
+      }
+    ]
+  },
+  "polish": {
+    "metrics": {
+      "n": 30,
+      "json_valid_pct": 100.0,
+      "avg_events_per_sample": 2.6,
+      "trigger_in_input_pct": 92.3076923076923,
+      "schema_valid_pct": 100.0,
+      "avg_trigger_words": 1.0128205128205128,
+      "single_word_pct": 98.71794871794872
+    },
+    "elapsed_s": 37.112279176712036,
+    "samples": [
+      {
+        "text": "Przebieg bitwy . Bułgaria przystąpiła do wojny po stronie państw centralnych 14 października 1915 roku . Celem 1 Armii bułgarskiej dowodzonej przez gen . Georgiego Todorowa było opanowanie doliny rzek",
+        "raw": "{\"events\": [[\"przystąpiła\", \"Conflict:Attack\"], [\"wkroczyły\", \"Movement:Transport\"]]}",
+        "parsed": [
+          [
+            "przystąpiła",
+            "Conflict:Attack"
+          ],
+          [
+            "wkroczyły",
+            "Movement:Transport"
+          ]
+        ]
+      },
+      {
+        "text": "Rafael Porcellis de Oliveira ( ur . 19 stycznia 1987 roku ) – brazylijski piłkarz występujący na pozycji napastnika . Kariera klubowa . Porcellis pierwsze kroki w piłce nożnej stawiał w drużynach młod",
+        "raw": "{\"events\": [[\"przeniósł\", \"Movement:Transport\"]]}`",
+        "parsed": [
+          [
+            "przeniósł",
+            "Movement:Transport"
+          ]
+        ]
+      },
+      {
+        "text": "Wiele uczennic korzystało z ulg w opłatach czesnego , zaledwie 2 – 3 % uczennic opłacało pełne taksy . Mimo to Jakubowska ulepszała stale organizację i warunki nauczania . Mieszkając przy szkole zawsz",
+        "raw": "{\"events\": [[\"korzystało\", \"Transaction:Transfer-Ownership\"], [\"opłacało\", \"Transaction:Transfer-Money\"], [\"ulepszała\", \"Movement:Transport\"], [\"mieszkając\", \"Movement:Transport\"], [\"układała\", \"Life:Marry\"], [\"organizowała\", \"Movement:Transport\"], [\"przenieśli\", \"Movement:Transport\"], [\"była\", \"Lif",
+        "parsed": [
+          [
+            "korzystało",
+            "Transaction:Transfer-Ownership"
+          ],
+          [
+            "opłacało",
+            "Transaction:Transfer-Money"
+          ],
+          [
+            "ulepszała",
+            "Movement:Transport"
+          ],
+          [
+            "mieszkając",
+            "Movement:Transport"
+          ],
+          [
+            "układała",
+            "Life:Marry"
+          ],
+          [
+            "organizowała",
+            "Movement:Transport"
+          ],
+          [
+            "przenieśli",
+            "Movement:Transport"
+          ],
+          [
+            "była",
+            "Life:Be-Born"
+          ]
+        ]
+      }
+    ]
+  },
+  "turkisk": {
+    "metrics": {
+      "n": 30,
+      "json_valid_pct": 96.66666666666667,
+      "avg_events_per_sample": 1.8666666666666667,
+      "trigger_in_input_pct": 91.07142857142857,
+      "schema_valid_pct": 100.0,
+      "avg_trigger_words": 1.0892857142857142,
+      "single_word_pct": 91.07142857142857
+    },
+    "elapsed_s": 23.460477590560913,
+    "samples": [
+      {
+        "text": "Dar anlamda özelleştirmede mutlak olarak mülkiyetin devrinin ( en az % 51’nin devrinin ) gerçekleşmesi ve yönetimin özel kesime geçmesi gerekmektedir . Ancak bir başka görüşe göre daha az oranda bir h",
+        "raw": "{\"events\": []}",
+        "parsed": []
+      },
+      {
+        "text": "Coutinho Antônio Wilson Vieira Honório ya da kısa adıyla Coutinho ( 11 Haziran 1943 - 11 Mart 2019 ) , Brezilyalı eski futbolcudur . Kariyeri . Futbol kariyeri boyunca çoğunlukta Santos FC futbol takı",
+        "raw": "{\"events\": [[\"died\", \"Life:Die\"]]})",
+        "parsed": [
+          [
+            "died",
+            "Life:Die"
+          ]
+        ]
+      },
+      {
+        "text": "Çocukluğu ve gençliği . Thorpe’un doğumu , tam adı ve etnik kökeni hakkında oldukça farklı bilgiler bulunmaktadır . Kesin olarak bilinen Thorpe’un Yerli Toprakları’nda doğduğudur ancak doğum sertifika",
+        "raw": "{\"events\": [[\"doğdu\", \"Life:Be-Born\"]]}",
+        "parsed": [
+          [
+            "doğdu",
+            "Life:Be-Born"
+          ]
+        ]
+      }
+    ]
+  }
+}
