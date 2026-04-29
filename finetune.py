@@ -177,6 +177,10 @@ def get_distil_loss(args, tokenizer, model, teacher_model, model_batch, no_model
         teacher_model.eval()
         teacher_outputs = teacher_model(**model_batch, use_cache=False)
         teacher_logits = teacher_outputs.logits
+        # Multimodal teachers (e.g. gemma-3-4b-it) have extra image-token logits
+        # beyond the text vocab. Truncate to student vocab so KD shapes match.
+        if teacher_logits.size(-1) != logits.size(-1):
+            teacher_logits = teacher_logits[..., :logits.size(-1)]
     if args.model_parallel:
         raise NotImplementedError
     else:

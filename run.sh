@@ -7,8 +7,10 @@
 
 cd /mnt/phongdq/projects/open-ed && \
 bash scripts/qwen/tools/process_data_ace_llama.sh && \
+bash scripts/qwen/sft/sft_llama_1B_ace.sh && \
 bash scripts/qwen/sft/sft_llama_3B_ace.sh && \
 bash scripts/qwen/span_distillm/ace/train_1B_3B_llama.sh && \
 bash scripts/qwen/tools/process_data_ace_gemma.sh && \
+bash scripts/qwen/sft/sft_gemma_1B_ace.sh && \
 bash scripts/qwen/sft/sft_gemma_4B_ace.sh && \
 bash scripts/qwen/span_distillm/ace/train_1B_4B_gemma.sh
