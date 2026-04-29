@@ -163,6 +163,9 @@ def ed_evaluate(pred_list, gt_list):
                 "f1": f1
             }
 
+    cls_acc = (trigger_counts["tp"] / trigger_text_counts["tp"]
+               if trigger_text_counts["tp"] > 0 else 0)
+
     return {
         "trigger_counts": trigger_counts,
         "argument_counts": argument_counts,
@@ -175,7 +178,8 @@ def ed_evaluate(pred_list, gt_list):
             "precision": trigger_metrics[0],
             "recall": trigger_metrics[1],
             "f1": trigger_metrics[2],
-        },        
+        },
+        "trigger_cls_acc": cls_acc,
         "argument": {
             "precision": argument_metrics[0],
             "recall": argument_metrics[1],

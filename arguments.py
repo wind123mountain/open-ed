@@ -134,14 +134,24 @@ def add_hp_args(parser: argparse.ArgumentParser):
     group.add_argument('--loss-scale', type=float, default=65536,
                        help='loss scale')
     group.add_argument("--kd-ratio", type=float, default=None)
+    group.add_argument("--augd", action="store_true", default=False,
+                       help="Use Adaptive Unified Gradient Descent (AUGD) for dynamic loss weighting instead of fixed kd_ratio")
+    group.add_argument("--kd-ratio-new", type=float, default=None,
+                       help="KD ratio for new-type samples (teacher-uncertain). None = use kd-ratio for all. "
+                            "When set, interpolates between kd-ratio (replay) and kd-ratio-new (new) based on teacher confidence.")
+    group.add_argument("--patience", type=int, default=0,
+                       help="Early stopping patience in epochs. 0 = disabled (train all epochs).")
 
     # Continual-learning task index (0 = first task, CE only; ≥1 = apply replay + distill)
     group.add_argument("--cl-task-id", type=int, default=0,
                        help="Current CL task index. Task 0 uses CE only; tasks ≥1 add replay and distillation losses.")
 
     # Continual-learning distillation (old model → new model KL)
+    group.add_argument("--cl-distill", action="store_true", default=False,
+                       help="Enable CL distillation from frozen old-model snapshot. Actual weight is --kd-ratio.")
     group.add_argument("--cl-distill-coef", type=float, default=0.0,
-                       help="Weight for KL distillation loss from frozen old model. 0 = disabled.")
+                       help="[DEPRECATED] Legacy enable flag for CL distillation. Use --cl-distill instead. "
+                            "Only checked as >0 to enable; value is NOT used as weight.")
 
     group.add_argument('--warmup-iters', type=int, default=0,
                        help='percentage of data to warmup on (.01 = 1% of all '

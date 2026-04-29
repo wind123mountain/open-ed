@@ -45,6 +45,7 @@ from rouge_metric import compute_metrics
 
 from peft import PeftModel
 from ed_eval import ed_evaluate
+from re_eval import re_evaluate
 
 torch.set_num_threads(4)
 
@@ -262,13 +263,21 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
     prev_avg_loss = evaluate(args, tokenizer, model, dataset["dev"], "dev", 0, device, adaptive_threshold)
     cl_task_id = getattr(args, "cl_task_id", 0)
     old_model_module = None
-    if cl_task_id >= 1 and getattr(args, "cl_distill_coef", 0.0) > 0:
+    cl_distill_enabled = getattr(args, 'cl_distill', False) or getattr(args, 'cl_distill_coef', 0.0) > 0
+    if cl_task_id >= 1 and cl_distill_enabled:
         old_model_module = copy.deepcopy(model.module)
         old_model_module.eval()
         old_model_module.to(device)
         for p in old_model_module.parameters():
             p.requires_grad_(False)
         print_rank("[CL-Distill] Saved frozen old-model snapshot (GPU).")
+
+    # Early stopping state
+    best_dev_loss = prev_avg_loss
+    patience_counter = 0
+    patience = getattr(args, 'patience', 0)
+    if patience > 0:
+        print_rank(f"[Early-Stop] Enabled with patience={patience} epochs. Initial dev loss: {best_dev_loss:.4f}")
 
     for epoch in range(args.epochs):
         sampler.set_epoch(epoch)
@@ -302,33 +311,108 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
                         teacher_outputs = distil_teacher(**model_batch, use_cache=False)
 
                 if t_model_batch is not None:
-                    student_mask = no_model_batch['label'] != -100 
-                    teacher_mask = t_no_model_batch['label'] != -100 
+                    student_mask = no_model_batch['label'] != -100
+                    teacher_mask = t_no_model_batch['label'] != -100
 
                     s_lengths = student_mask.sum(dim=1)  # Shape: (batch_size)
                     t_lengths = teacher_mask.sum(dim=1)  # Shape: (batch_size)
-                    min_lengths = torch.min(s_lengths, t_lengths).unsqueeze(1) 
-                    
+                    min_lengths = torch.min(s_lengths, t_lengths).unsqueeze(1)
+
                     s_valid_cumsum = student_mask.cumsum(dim=1)
                     t_valid_cumsum = teacher_mask.cumsum(dim=1)
-                    
+
                     final_student_mask = student_mask & (s_valid_cumsum <= min_lengths)
                     final_teacher_mask = teacher_mask & (t_valid_cumsum <= min_lengths)
 
                     logits = logits[final_student_mask]
                     teacher_logits = teacher_outputs.logits[final_teacher_mask]
-                    new_no_model_batch = {"label": no_model_batch["label"][final_student_mask]} 
-                    
+                    new_no_model_batch = {"label": no_model_batch["label"][final_student_mask]}
+
                 else:
+                    # CL old-model or no teacher data: same input → same positions
                     teacher_logits = teacher_outputs.logits
-                    new_no_model_batch = {"label": no_model_batch["label"]} 
+                    new_no_model_batch = {"label": no_model_batch["label"]}
 
                 distil_loss = get_distil_loss(args, teacher_logits, new_no_model_batch, logits)
-                loss = (1 - args.kd_ratio) * lm_loss + args.kd_ratio * distil_loss
+
+                # Compute effective KD ratio
+                # Adaptive KD: separate forward pass on student input (no answer)
+                # to measure teacher-forced response difficulty as a batch-level gate.
+                # The distillation loss itself still uses answer-conditioned t_model_batch.
+                effective_kd = args.kd_ratio
+                if old_model_module is not None and getattr(args, 'kd_ratio_new', None) is not None:
+                    with torch.no_grad():
+                        old_on_student = old_model_module(**model_batch, use_cache=False)
+                        old_ce = F.cross_entropy(
+                            old_on_student.logits.float().view(-1, old_on_student.logits.shape[-1]),
+                            no_model_batch["label"].view(-1), reduction='none'
+                        )
+                        mask_flat = (no_model_batch["label"].view(-1) != -100).float()
+                        batch_size = no_model_batch["label"].shape[0]
+                        per_sample = (old_ce.view(batch_size, -1) * mask_flat.view(batch_size, -1)).sum(1) \
+                                     / mask_flat.view(batch_size, -1).sum(1).clamp(min=1)
+                        batch_mean = per_sample.mean().item()
+                        batch_std = per_sample.std(unbiased=False).item()
+
+                        if not hasattr(args, '_old_ce_ema_mean'):
+                            args._old_ce_ema_mean = batch_mean
+                            args._old_ce_ema_std = max(batch_std, 1e-6)
+                            args._old_ce_warmup_steps = 0
+
+                        if args._old_ce_warmup_steps < 20:
+                            args._old_ce_warmup_steps += 1
+                            avg_w = 1.0  # calibrate first, then adapt
+                        else:
+                            beta = 0.9
+                            args._old_ce_ema_mean = beta * args._old_ce_ema_mean + (1 - beta) * batch_mean
+                            args._old_ce_ema_std = beta * args._old_ce_ema_std + (1 - beta) * max(batch_std, 1e-6)
+                            norm = (args._old_ce_ema_mean - per_sample) / max(args._old_ce_ema_std, 1e-6)
+                            weights = torch.sigmoid(norm)
+                            avg_w = weights.mean().item()
+
+                    effective_kd = args.kd_ratio_new + (args.kd_ratio - args.kd_ratio_new) * avg_w
+
+                if getattr(args, 'augd', False):
+                    augd_interval = 10
+                    if not hasattr(args, '_augd_kd_weight'):
+                        args._augd_kd_weight = 1.0
+
+                    if step % augd_interval == 1:
+                        lm_loss.backward(retain_graph=True)
+                        g_ce_flat = []
+                        for name, p in model.module.named_parameters():
+                            if p.requires_grad and p.grad is not None:
+                                g_ce_flat.append(p.grad.detach().clone().view(-1))
+                        g1 = torch.cat(g_ce_flat)
+                        model.module.zero_grad()
+
+                        distil_loss.backward(retain_graph=True)
+                        g_kd_flat = []
+                        for name, p in model.module.named_parameters():
+                            if p.requires_grad and p.grad is not None:
+                                g_kd_flat.append(p.grad.detach().clone().view(-1))
+                        g2 = torch.cat(g_kd_flat)
+                        model.module.zero_grad()
+
+                        g1_norm = g1.norm() + 1e-8
+                        g2_norm = g2.norm() + 1e-8
+                        u1 = g1 / g1_norm
+                        dot = torch.dot(g2, u1)
+                        if dot < 0:
+                            g2_proj = g2 - dot * u1
+                        else:
+                            g2_proj = g2
+                        g2_proj_norm = g2_proj.norm() + 1e-8
+                        alpha2 = g2_norm / g2_proj_norm
+                        cos_ratio = torch.dot(g2_proj, g2) / (g2_proj_norm * g2_norm + 1e-8)
+                        args._augd_kd_weight = (alpha2 * cos_ratio).clamp(0, 5).item()
+
+                    loss = lm_loss + args._augd_kd_weight * distil_loss
+                else:
+                    loss = (1 - effective_kd) * lm_loss + effective_kd * distil_loss
             else:
                 loss = lm_loss
-                
-                
+
             model.backward(loss)
             model.step()
              
@@ -417,6 +501,34 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
             if global_step > args.total_iters:
                 break
 
+        # Early stopping: evaluate after each epoch
+        if patience > 0 and epoch < args.epochs - 1:
+            epoch_dev_loss = evaluate(args, tokenizer, model, dataset["dev"], "dev", epoch + 1, device, adaptive_threshold)
+            model.train()
+            if epoch_dev_loss < best_dev_loss:
+                best_dev_loss = epoch_dev_loss
+                patience_counter = 0
+                # Save best checkpoint
+                if dist.get_rank() == 0:
+                    best_dir = os.path.join(args.save, "best")
+                    os.makedirs(best_dir, exist_ok=True)
+                    model.module.save_pretrained(best_dir, safe_serialization=False)
+                    tokenizer.save_pretrained(best_dir)
+                    print_rank(f"[Early-Stop] Epoch {epoch+1}: dev_loss={epoch_dev_loss:.4f} (improved). Saved to {best_dir}")
+                dist.barrier()
+            else:
+                patience_counter += 1
+                print_rank(f"[Early-Stop] Epoch {epoch+1}: dev_loss={epoch_dev_loss:.4f} (no improvement {patience_counter}/{patience})")
+                if patience_counter >= patience:
+                    print_rank(f"[Early-Stop] Stopping at epoch {epoch+1}. Best dev_loss={best_dev_loss:.4f}")
+                    # Load best checkpoint
+                    if os.path.exists(os.path.join(args.save, "best")):
+                        from peft import PeftModel
+                        best_path = os.path.join(args.save, "best")
+                        model.module.load_adapter(best_path, adapter_name="default")
+                        print_rank(f"[Early-Stop] Loaded best checkpoint from {best_path}")
+                    break
+
     return model
 
 
@@ -434,12 +546,9 @@ def evaluate(args, tokenizer, model, dataset: LMTrainDataset, split, epoch, devi
 
     print_rank("dp size", dp_world_size)
 
+    # Eval uses greedy decoding for deterministic, reproducible results
     generation_config = GenerationConfig(
-        do_sample=args.do_sample,
-        top_p=args.top_p,
-        top_k=args.top_k,
-        temperature=args.temperature,
-        repetition_penalty=args.repetition_penalty,
+        do_sample=False,
         max_length=args.max_length,
         min_length=None,
         eos_token_id=[tokenizer.eos_token_id, 151643],
@@ -506,8 +615,13 @@ def evaluate(args, tokenizer, model, dataset: LMTrainDataset, split, epoch, devi
             
             res = compute_metrics(responses, references)
 
-            ed_metrics = ed_evaluate(responses, references)
-            res.update(ed_metrics)
+            # Auto-detect task type from gold references
+            first_gold = references[0][0] if references else ""
+            if "relations" in first_gold:
+                task_metrics = re_evaluate(responses, references)
+            else:
+                task_metrics = ed_evaluate(responses, references)
+            res.update(task_metrics)
         
             eval_dir = os.path.join(args.save, "eval", str(epoch))
             print_rank(eval_dir)
