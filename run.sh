@@ -51,3 +51,6 @@ bash scripts/qwen/span_distillm/ace/train_1B_3B_llama.sh
 #     Nếu step thực ≠ 246 (spanish) hoặc 114 (portuguese) thì sửa giá trị hardcode trong script.
 bash scripts/qwen/span_distillm/minion/train_0.6B_4B_minion_spanish.sh
 bash scripts/qwen/span_distillm/minion/train_0.6B_4B_minion_portuguese.sh
+
+# (e) DistiLLM SFKL baseline (Spanish) — for cross-method comparison vs EventKD
+bash scripts/qwen/distillm/minion/train_0.6B_4B_minion_spanish.sh
