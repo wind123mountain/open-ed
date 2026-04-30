@@ -26,7 +26,7 @@ DATA_DIR="${BASE_PATH}/processed_data/ace/llama/"
 # hp
 BATCH_SIZE=2
 LR=0.0002
-GRAD_ACC=1
+GRAD_ACC=2
 EVAL_BATCH_SIZE=64
 EPOCHS=5
 # length

@@ -7,7 +7,7 @@ set -e
 
 LANG_NAME="${1:?usage: $0 <lang>}"
 
-GPUS=(0 1)
+GPUS=(0 1 2 3 4 5 6 7)
 export CUDA_VISIBLE_DEVICES=$(IFS=,; echo "${GPUS[*]}")
 
 MASTER_ADDR=localhost
@@ -31,7 +31,7 @@ DATA_DIR="${BASE_PATH}/processed_data/minion_${LANG_NAME}/qwen/"
 # hp
 BATCH_SIZE=2
 LR=0.0001
-GRAD_ACC=8
+GRAD_ACC=2
 EVAL_BATCH_SIZE=32
 EPOCHS=3
 # length
