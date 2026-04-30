@@ -18,7 +18,7 @@ DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE \
 # model
 BASE_PATH=.
 CKPT_NAME="llama3.2-1B"
-CKPT="meta-llama/Llama-3.2-1B"
+CKPT="meta-llama/Llama-3.2-1B-Instruct"
 TEACHER_CKPT_NAME="llama3-8B"
 TEACHER_CKPT="meta-llama/Meta-Llama-3-8B-Instruct"
 # data

@@ -350,9 +350,7 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
 
                 distil_loss = get_distil_loss(args, teacher_logits, no_model_batch, logits)
 
-                mask = (no_model_batch['label'] != -100).long()
-
-                span_loss = compute_overall_relation_loss_loss(mask, student_captured_hidden, 
+                span_loss = compute_overall_relation_loss_loss(model_batch['attention_mask'], student_captured_hidden, 
                                                                teacher_outputs.hidden_states, args)
                 span_loss = args.w_span_loss * span_loss
                 distil_loss = distil_loss + span_loss
