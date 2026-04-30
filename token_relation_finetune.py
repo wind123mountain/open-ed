@@ -195,7 +195,7 @@ def get_distil_loss(args, teacher_logits, no_model_batch, logits):
     return distil_loss
 
 
-def relation_loss_fn(self, student_hidden, teacher_hidden, attention_mask=None):
+def relation_loss_fn(student_hidden, teacher_hidden, attention_mask=None):
     student_norm = F.normalize(student_hidden, p=2, dim=-1)
     teacher_norm = F.normalize(teacher_hidden, p=2, dim=-1)
 
@@ -224,67 +224,6 @@ def compute_overall_relation_loss_loss(attention_mask, s_hidden_states, t_hidden
     
     overall_loss = loss / len(args.student_layer_mapping)
     return overall_loss
-
-def compute_hidden_span_loss(s_hidden_state, t_hidden_state, All_Indices, 
-                             S_Token_Weights_all, T_Token_Weights_all, Span_IDs, Max_Spans, Batch_ID_for_Spans):
-    D_hidden_s = s_hidden_state.size(-1)
-    D_hidden_t = t_hidden_state.size(-1)
-    device = t_hidden_state.device
-
-    T_Hidden_Flat = t_hidden_state.flatten(0, 1) # (B*SeqLen, D_hidden_t)
-    S_Hidden_Flat = s_hidden_state.flatten(0, 1) # (B*SeqLen, D_hidden_s)
-
-    # 1. Trích xuất và Áp dụng Trọng số
-    T_span_all = T_Hidden_Flat[All_Indices] # (T_total, D_hidden_t)
-    S_span_all = S_Hidden_Flat[All_Indices] # (T_total, D_hidden_s)
-    
-    T_Token_Weights_expanded = T_Token_Weights_all.unsqueeze(-1) 
-    S_Token_Weights_expanded = S_Token_Weights_all.unsqueeze(-1)
-    
-    T_span_weighted = T_span_all * T_Token_Weights_expanded # (T_total, D_hidden_t)
-    S_span_weighted = S_span_all * S_Token_Weights_expanded # (T_total, D_hidden_s)
-
-    Span_IDs_expanded_t = Span_IDs.unsqueeze(-1).expand(-1, D_hidden_t) 
-    Span_IDs_expanded_s = Span_IDs.unsqueeze(-1).expand(-1, D_hidden_s) 
-
-    T_span_sum = torch.zeros(Max_Spans, D_hidden_t, device=device)
-    S_span_sum = torch.zeros(Max_Spans, D_hidden_s, device=device)
-    T_Weight_sum_1d = torch.zeros(Max_Spans, device=device)
-    S_Weight_sum_1d = torch.zeros(Max_Spans, device=device)
-
-    T_span_sum.scatter_add_(0, Span_IDs_expanded_t, T_span_weighted)
-    S_span_sum.scatter_add_(0, Span_IDs_expanded_s, S_span_weighted)
-
-    T_Weight_sum_1d.scatter_add_(0, Span_IDs, T_Token_Weights_all) 
-    T_Weight_sum = T_Weight_sum_1d.clamp(min=1e-5).unsqueeze(-1) # (Max_Spans, 1)
-    S_Weight_sum_1d.scatter_add_(0, Span_IDs, S_Token_Weights_all)
-    S_Weight_sum = S_Weight_sum_1d.clamp(min=1e-5).unsqueeze(-1) # (Max_Spans, 1)
-
-    # Tính Trung bình (Mean)
-    T_span_hidden_mean = T_span_sum / T_Weight_sum 
-    S_span_hidden_mean = S_span_sum / S_Weight_sum
-
-    S_normalized = F.normalize(S_span_hidden_mean, p=2, dim=-1)
-    T_normalized = F.normalize(T_span_hidden_mean, p=2, dim=-1)
-    S_Full_Sim_Matrix = S_normalized @ S_normalized.T
-    T_Full_Sim_Matrix = T_normalized @ T_normalized.T
-
-    Batch_IDs_col = Batch_ID_for_Spans.unsqueeze(1)
-    Batch_IDs_row = Batch_ID_for_Spans.unsqueeze(0)
-    Same_Batch_Mask = (Batch_IDs_col == Batch_IDs_row)
-    Not_Self_Mask = ~torch.eye(Max_Spans, dtype=torch.bool, device=device)
-    Final_Mask = Same_Batch_Mask & Not_Self_Mask
-
-    S_intra_batch_similarities_flat = torch.masked_select(S_Full_Sim_Matrix, Final_Mask)
-    T_intra_batch_similarities_flat = torch.masked_select(T_Full_Sim_Matrix, Final_Mask)
-
-    Pair_Weights_Matrix = T_Weight_sum_1d.unsqueeze(1) * T_Weight_sum_1d.unsqueeze(0)
-    Valid_Pair_Weights = torch.masked_select(Pair_Weights_Matrix, Final_Mask)
-
-    span_loss = F.mse_loss(S_intra_batch_similarities_flat, T_intra_batch_similarities_flat, reduction='none')
-    span_loss = (span_loss * Valid_Pair_Weights).sum() / Valid_Pair_Weights.sum().clamp(min=1e-5)
-
-    return span_loss
 
 def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, optimizer: AdamW, lr_scheduler, dataset, device, teacher_model=None):
     print_rank("Start Fine-tuning")

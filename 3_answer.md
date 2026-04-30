@@ -11,9 +11,15 @@
 ## Answer:
 
 **(W1) On cross-event relations and graph structure.**
-We thank the reviewer for this thoughtful suggestion. To clarify our scope: Section 4.1 frames the *intra-event* graph (trigger ↔ event type ↔ arguments ↔ argument roles) as the structural unit our method captures, which is itself non-trivial and largely ignored by token-level KD. The line the reviewer cites (L299) refers to this intra-event graph rather than to cross-event relations.
+We thank the reviewer and clarify both the scope of our work and how it relates to the cross-event relation literature.
 
-That said, we agree cross-event relations (coreferent triggers, temporal/causal relations, document-level event structure) are a valuable extension. Importantly, **the EventKD framework readily generalizes to this setting**: the only required change is to expand the event-aware span set to include cross-document or cross-sentence event mentions; the pairwise distance loss (Eq. 7) operates unchanged on the enlarged span set. We will make this extensibility explicit in the camera-ready and add cross-event-relation transfer as future work.
+*Task scope.* Our paper targets **event extraction (EE)**, comprising trigger identification, event-type classification, and argument extraction within an instance. The line at L299 refers to the *intra-event* graph (trigger ↔ event type ↔ arguments ↔ argument roles) that constitutes a single event mention, and EventKD is designed to distill exactly this structure.
+
+*Cross-event relation extraction (ERE)* is a distinct downstream task that predicts pairwise relations *between* already-extracted events, typically along the four canonical dimensions formalized by MAVEN-ERE (Wang et al., EMNLP 2022): **event coreference**, **temporal** (Before / Overlap / Contains / etc.), **causal** (Cause / Precondition), and **subevent** (Part-of). Standard pipelines run EE first and then feed the extracted events into ERE.
+
+*Relationship of EventKD to ERE.* Because ERE consumes the output of EE as input, **improving the EE component, especially at compact-model scale, directly benefits any downstream ERE system** that adopts such a student. This is a particularly relevant deployment scenario: ERE typically reasons over O(N²) event pairs per document, where inference cost of a 4B-class teacher quickly becomes the bottleneck. A 0.6B distilled student that retains 92.8% / 93.6% of teacher Trigger / Argument F1 (Tables 1/2) therefore makes ERE pipelines substantially more practical.
+
+*Method extensibility.* The event-aware span set already contains trigger, argument, and event-type spans within an instance; extending it to cover spans from multiple events in the same document allows the pairwise cosine loss (Eq. 7) to align *inter-event* geometry as well. We note honestly that fully transferring ERE-style *typed* labels (Before / Cause / Subevent) would also require additional teacher supervision beyond geometric distance, for example by augmenting the teacher's structured output with relation triples and adding a label-aware loss term. We mark *joint EE-ERE distillation* as a natural extension and will discuss it, together with citations to MAVEN-ERE and related ERE work, as future work in the camera-ready.
 
 **(W2) On cross-family teacher–student.**
 We have run a cross-family experiment on ACE05 using **Llama-3.2-3B-Instruct as teacher and Llama-3.2-1B-Instruct as student**. The pipeline is identical to our Qwen3 setup (LoRA SFT for the teacher, EventKD with SFKL + L_EA for the student) except for the layer-mapping indices, which are scaled proportionally to the depth of Llama-3.2: teacher layers [22, 25, 28] → student layers [10, 13, 16] (last three evenly spaced layers, matching the pattern used for Qwen).
@@ -30,12 +36,24 @@ EventKD improves over the student-only SFT baseline in **both** families on **bo
 **(W3) On the distillation ratio β = 0.9.**
 The 0.9 ratio is motivated by the asymmetry between the two signals available to the student: the cross-entropy loss provides only the *single argmax* token at each position, while the structured teacher distribution (and its event-aware geometry) carries the full distributional and relational information that we wish to transfer. Up-weighting the distillation term is consistent with prior generative-LLM KD work that uses high distillation weights when the teacher is significantly stronger than the student (e.g., DistilBERT, MiniLLM, DistiLLM). We are running a sensitivity sweep over β ∈ {0.3, 0.5, 0.7, 0.9, 0.95} on ACE05 and will report the full curve with the camera-ready; preliminary numbers indicate that performance is *flat in a wide neighborhood around 0.9* and degrades only at β ≤ 0.3, supporting the choice as a near-optimal plateau rather than a brittle setting.
 
-**(W4) On inference efficiency and student–teacher 
-comparison.**
-We will rename Table 5 to *Training and Inference Cost* and add three columns for the student model: parameter count, inference latency at batch sizes 1 and 16, and peak GPU memory at inference, all measured on a single A100. With a 0.6B student vs a 4B teacher, EventKD delivers a **6.7× parameter compression** while retaining 89% of teacher trigger F1 and 94% of teacher argument F1 on ACE05 (Table 1/2 of the paper). This directly addresses the practical-deployment value of the compact student that we emphasize in the introduction.
+**(W4) On inference efficiency and student–teacher comparison.**
+We will rename Table 5 to *Training and Inference Cost* and add a new comparison block reporting parameter count, inference latency (batch sizes 1 and 16), throughput, and peak GPU memory for the teacher and student on ACE05 (single A100/A40, bf16, deterministic decoding, 50 test prompts, 5-batch warmup). Preliminary numbers will be added before camera-ready; the table layout is:
+
+| Model | Params | Latency bs=1 (ms) | Throughput bs=16 (samples/s) | Peak GPU mem (GB) | Trigger F1 | Argument F1 |
+|---|---|---|---|---|---|---|
+| Teacher (Qwen3-4B + LoRA) | 4.02B | TBD | TBD | TBD | 72.31 | 46.45 |
+| **Student (Qwen3-0.6B + EventKD, ours)** | **0.60B** | **TBD** | **TBD** | **TBD** | **67.12** | **43.46** |
+| **Student / Teacher** | **0.15×** | **TBD ↓** | **TBD ↑** | **TBD ↓** | **92.8%** | **93.6%** |
+
+Crucially, **EventKD's training-time additions do not affect inference cost**: at deployment time only the distilled student is needed, and all KD baselines we compare against (KD, RKL, SFKL, CSD, EventKD) share the same student backbone. They therefore have identical parameter count, latency, throughput, and memory footprint at inference. The 6.7× parameter compression and the latency/memory advantages it brings reflect the deployment value of the compact student class as a whole, while EventKD specifically maximizes how much of the teacher's F1 (Trigger 92.8% / Argument 93.6%) is retained within that fixed cost budget.
 
 **(C1) On proofreading.**
-We thank the reviewer; we will conduct a thorough proofreading pass and harmonize formatting, table captions, and figure references in the camera-ready.
+We thank the reviewer for this concrete suggestion. Before the camera-ready we will perform a dedicated proofreading pass, covering specifically:
+1. **Notation consistency**: harmonized formatting of vectors and subscripts (U^T_i, U^S_i, d_ij, L_EA, L_KD, L_CE) across the main text, equations (Eqs. 4–8), Figure 2, and tables.
+2. **Table captions and headers**: consistent metric naming (Trigger / Argument F1, Precision / Recall / F1 ordering) and column-header capitalization across Tables 1–6, plus uniform footnote style.
+3. **Cross-references**: verified every "see Table X / Section Y / Eq. Z / Figure W" pointer in the manuscript.
+4. **Reference list**: aligned author-name abbreviation, venue capitalization, and DOI/URL formatting following ACL style.
+5. **Typo and grammar pass**: full-manuscript sweep including the appendix.
 
 
 # Official Review of Submission1211 by Reviewer TKRR
@@ -59,7 +77,13 @@ We thank the reviewer and use this opportunity to clarify how EventKD differs fr
 In the camera-ready we will add a Related Work comparison table along these three axes (granularity, task-awareness, model type) to make the contribution explicit.
 
 **(W2) Robustness to noisy / malformed teacher output.**
-We share this concern and have begun a robustness analysis on ACE05. (i) On the teacher's raw generations on the ACE05 test split, **>96% of outputs parse as valid JSON conforming to the expected event schema**, indicating that malformed output is a rare edge case once the teacher is fine-tuned. (ii) In our setup, when an individual response cannot be parsed into spans, the example silently falls back to *token-level KD only* (the LEA term contributes zero), so noise gracefully degrades the training signal rather than crashing it. (iii) We are running a controlled noise-injection study (random span drop at 10/20/30% and serialization corruption) and will report the F1 degradation curve in the camera-ready. Mitigation in the form of span-validity gating is also straightforward to add; we discuss this in the revised Limitations.
+We thank the reviewer and address this in three points.
+
+*(1) Noise propagation is a universal property of distillation, not a vulnerability of EventKD.* Any KD method that aligns student outputs to teacher outputs inherits whatever quality signal the teacher provides; when the teacher is noisy, the student is noisy, regardless of the specific KD loss. This is therefore a property of the distillation paradigm at large rather than a weakness introduced by event-aware span alignment.
+
+*(2) Our dual-loss design provides a built-in safety net.* The total objective in Eq. 8, **L_Total = (1 − β)·L_CE + β·(L_KD + λ_EA·L_EA)**, keeps the supervised cross-entropy term L_CE active throughout training. Even when the teacher generates a malformed or partially incorrect output for an example, L_CE anchors the student to the ground-truth structured annotation, providing a corrective signal that prevents the student from blindly mimicking teacher errors. The L_KD and L_EA terms transfer the teacher's distributional and structural knowledge *on top of*, not in place of, this supervised anchor.
+
+*(3) Empirically, malformed output is rare, and the loss degrades gracefully.* On the ACE05 test split, **>96% of teacher generations parse as valid JSON conforming to the expected event schema**, indicating malformed output is a rare edge case once the teacher is fine-tuned. When an individual response cannot be parsed into spans, the example silently falls back to *token-level KD only* (the L_EA term contributes zero), so noise reduces the training signal rather than crashing it. We are running a controlled noise-injection study (random span drop at 10/20/30% and serialization corruption) and will report the F1 degradation curve in the camera-ready, together with a span-validity gating variant in the appendix.
 
 **(W3) Cross-architecture and non-English generalization.**
 *Architectures.* We have run a cross-family experiment on ACE05 using **Llama-3.2-3B-Instruct → Llama-3.2-1B-Instruct**, with the layer mapping scaled proportionally to Llama's depth (teacher [22, 25, 28] → student [10, 13, 16]). Strict F1 results:
@@ -85,15 +109,15 @@ It would be helpful to provide a clearer comparison between the student and teac
 ## Answer:
 
 **(W1) Sufficiency of pairwise cosine distance for role-specific structure.**
-We agree that role information is an important aspect of event structure, and we appreciate the suggestion. We argue that pairwise cosine distance is nonetheless an effective and well-motivated formulation, for three reasons.
+We thank the reviewer for this important point. We acknowledge upfront that **EventKD does not encode role labels explicitly in the loss**: pairwise cosine distance among span representations is computed in the model's continuous embedding space without referencing the discrete role taxonomy. This is a deliberate design choice rather than an oversight, motivated by three considerations.
 
-*(a) Distance preservation implicitly encodes role information.* The teacher's hidden representations already encode role-specific semantics, which is precisely what fine-tuning on event extraction produces. By matching the *pairwise distance structure* of teacher spans, the student is forced to reproduce these role distinctions geometrically, even without explicit role labels in the loss. This is the same principle that gives Relational KD (Park et al., 2019) its strong empirical performance: relational distances *transfer* the structure that absolute representations would otherwise discard.
+*(a) Embedding space implicitly carries role information.* The teacher's hidden representations are produced by a model fine-tuned for event extraction; role-specific semantics are therefore already embedded in the geometry of the representation space across layers. By aligning the *pairwise cosine distance structure* of teacher spans to that of the student, we ask the student to reproduce the same geometric distinctions, including role-driven ones, even without using role labels in the loss. This mirrors the principle behind Relational KD (Park et al., 2019): relational distances transfer the structure that absolute representations would otherwise discard.
 
-*(b) Robustness to capacity gap.* Matching individual span representations directly (e.g., per-role MSE) would force the student to reproduce high-dimensional teacher features absolutely, a known-difficult problem under large capacity gaps. Pairwise distance alignment is invariant to representation rotation/scaling and only requires preserving *relative* structure, which is empirically easier for small students to satisfy.
+*(b) Encoding role triples directly is non-trivial.* A faithful representation of role-typed event structure would require encoding a (trigger, argument, role) triple as a structured object (for example a typed graph or relational tuple) together with a corresponding distance/loss function defined over this object. Designing such an objective so that it is differentiable, scale-invariant, and compatible with autoregressive generation is itself a substantial research direction. We therefore opted for the simpler, well-understood cosine-on-embeddings formulation as a strong first step that preserves semantic relations through distance similarity.
 
-*(c) Empirical evidence in the paper.* Table 6 (ablation on token-level KD losses with/without L_EA) shows that adding L_EA improves argument F1 by +5.32 (SFKL: 38.14 → 43.46) and +6.39 for RKL, a substantial gain on the *role-heavy* subtask. If pairwise distance failed to capture role structure, this gain would be implausible.
+*(c) Empirical evidence in the paper.* Table 6 (ablation on token-level KD losses with/without L_EA) shows that adding L_EA improves argument F1 by +5.32 (SFKL: 38.14 → 43.46) and +6.39 for RKL, substantial gains on the *role-heavy* argument-extraction subtask. If pairwise cosine distance failed to capture role-driven structure, these gains would be implausible.
 
-A natural extension is to enforce role-typed distance constraints (e.g., separate loss terms for trigger–argument vs argument–argument pairs); we agree this is promising and will list it as Future Work.
+We agree that explicit role-aware variants are a promising direction. Two natural extensions are: (i) **typed cosine constraints** with separate L_EA terms for trigger–argument, argument–argument, and trigger–event-type pairs, and (ii) **anchored cosine objectives** that pin trigger spans against the input-sentence representation to better preserve the trigger–context relation. We will include these as Future Work in the camera-ready.
 
 **(W2) Layer-mapping choice and stability.**
 Our choice of [30, 33, 36] → [22, 25, 28] reflects a deliberate principle: align the *last three* Transformer layers of teacher and student, evenly spaced. We choose late layers because event-related semantic content (event-type discrimination, argument-role abstraction) emerges most strongly in higher layers, as also reported in probing studies on LLMs. The same "last three evenly spaced" recipe transfers directly to other depths; for example, on the new Llama-3.2 cross-family experiment we use teacher [22, 25, 28] → student [10, 13, 16].

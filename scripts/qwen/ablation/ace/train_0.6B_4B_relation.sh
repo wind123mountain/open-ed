@@ -26,7 +26,7 @@ DATA_DIR="${BASE_PATH}/processed_data/ace/qwen/"
 # hp
 BATCH_SIZE=2
 LR=0.0002
-GRAD_ACC=1
+GRAD_ACC=2
 EVAL_BATCH_SIZE=64
 EPOCHS=5
 # length
@@ -109,7 +109,7 @@ export NCCL_DEBUG=""
 export WANDB_DISABLED=True
 export TF_CPP_MIN_LOG_LEVEL=3
 export PYTHONPATH=${BASE_PATH}
-CMD="torchrun ${DISTRIBUTED_ARGS} ${BASE_PATH}/token_relation_finetune.py.py ${OPTS} $@"
+CMD="torchrun ${DISTRIBUTED_ARGS} ${BASE_PATH}/token_relation_finetune.py ${OPTS} $@"
 
 echo ${CMD}
 echo "PYTHONPATH=${PYTHONPATH}"

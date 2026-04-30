@@ -49,8 +49,9 @@ bash scripts/qwen/span_distillm/ace/train_1B_3B_llama.sh
 #     LƯU Ý: 2 script này hardcode step number của teacher PEFT (246 / 114).
 #     Sau khi (c) chạy xong, verify: ls results/qwen3/sft_4B_minion_<lang>/e3-*/
 #     Nếu step thực ≠ 246 (spanish) hoặc 114 (portuguese) thì sửa giá trị hardcode trong script.
-bash scripts/qwen/span_distillm/minion/train_0.6B_4B_minion_spanish.sh
-bash scripts/qwen/span_distillm/minion/train_0.6B_4B_minion_portuguese.sh
+# bash scripts/qwen/span_distillm/minion/train_0.6B_4B_minion_spanish.sh
+# bash scripts/qwen/span_distillm/minion/train_0.6B_4B_minion_portuguese.sh
 
 # (e) DistiLLM SFKL baseline (Spanish) — for cross-method comparison vs EventKD
 bash scripts/qwen/distillm/minion/train_0.6B_4B_minion_spanish.sh
+bash scripts/qwen/ablation/ace/train_0.6B_4B_relation.sh
