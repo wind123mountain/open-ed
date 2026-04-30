@@ -6,11 +6,11 @@
 # bash scripts/qwen/ablation/ace/train_0.6B_4B_3.sh
 
 # bash scripts/qwen/tools/process_data_ace_llama.sh
-# bash scripts/qwen/sft/sft_llama_1B_ace.sh
+bash scripts/qwen/sft/sft_llama_1B_ace.sh
 # bash scripts/qwen/sft/sft_llama_3B_ace.sh
-# bash scripts/qwen/span_distillm/ace/train_1B_3B_llama.sh
-# bash scripts/qwen/distillm/ace/train_1B_3B_llama.sh
-# bash scripts/qwen/distillm/ace/train_1B_3B_llama_csd.sh
+bash scripts/qwen/span_distillm/ace/train_1B_3B_llama.sh
+bash scripts/qwen/distillm/ace/train_1B_3B_llama.sh
+bash scripts/qwen/distillm/ace/train_1B_3B_llama_csd.sh
 # bash scripts/qwen/tools/process_data_ace_gemma.sh
 # bash scripts/qwen/sft/sft_gemma_1B_ace.sh
 # bash scripts/qwen/sft/sft_gemma_4B_ace.sh
@@ -53,5 +53,5 @@
 # bash scripts/qwen/span_distillm/minion/train_0.6B_4B_minion_portuguese.sh
 
 # (e) DistiLLM SFKL baseline (Spanish) — for cross-method comparison vs EventKD
-bash scripts/qwen/distillm/minion/train_0.6B_4B_minion_spanish.sh
+# bash scripts/qwen/distillm/minion/train_0.6B_4B_minion_spanish.sh
 # bash scripts/qwen/ablation/ace/train_0.6B_4B_relation.sh

@@ -18,7 +18,7 @@ DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE \
 # model
 BASE_PATH=.
 CKPT_NAME="llama3.2-1B"
-CKPT="meta-llama/Llama-3.2-1B-Instruct"
+CKPT="meta-llama/Llama-3.2-1B"
 TEACHER_CKPT_NAME="llama3.2-3B"
 TEACHER_CKPT="meta-llama/Llama-3.2-3B-Instruct"
 # data
@@ -116,7 +116,7 @@ OPTS+=" --peft-lora-dropout 0.1"
 # Llama-3.2-3B teacher: 28 transformer layers (hidden_states idx 0..28)
 # Llama-3.2-1B student: 16 transformer layers (hidden_states idx 0..16)
 OPTS+=" --teacher_layer_mapping 22 25 28"
-OPTS+=" --student_layer_mapping 14 15 16"
+OPTS+=" --student_layer_mapping 12 14 16"
 OPTS+=" --w-span-loss 2.0"
 
 
