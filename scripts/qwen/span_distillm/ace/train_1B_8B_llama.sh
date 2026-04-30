@@ -24,9 +24,9 @@ TEACHER_CKPT="meta-llama/Meta-Llama-3-8B-Instruct"
 # data
 DATA_DIR="${BASE_PATH}/processed_data/ace/llama/"
 # hp
-BATCH_SIZE=2
+BATCH_SIZE=1
 LR=0.0002
-GRAD_ACC=1
+GRAD_ACC=2
 EVAL_BATCH_SIZE=32
 EPOCHS=5
 # length
