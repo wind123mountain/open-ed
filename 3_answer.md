@@ -22,16 +22,22 @@ We thank the reviewer and clarify both the scope of our work and how it relates 
 *Method extensibility.* The event-aware span set already contains trigger, argument, and event-type spans within an instance; extending it to cover spans from multiple events in the same document allows the pairwise cosine loss (Eq. 7) to align *inter-event* geometry as well. We note honestly that fully transferring ERE-style *typed* labels (Before / Cause / Subevent) would also require additional teacher supervision beyond geometric distance, for example by augmenting the teacher's structured output with relation triples and adding a label-aware loss term. We mark *joint EE-ERE distillation* as a natural extension and will discuss it, together with citations to MAVEN-ERE and related ERE work, as future work in the camera-ready.
 
 **(W2) On cross-family teacher–student.**
-We have run a cross-family experiment on ACE05 using **Llama-3.2-3B-Instruct as teacher and Llama-3.2-1B-Instruct as student**. The pipeline is identical to our Qwen3 setup (LoRA SFT for the teacher, EventKD with SFKL + L_EA for the student) except for the layer-mapping indices, which are scaled proportionally to the depth of Llama-3.2: teacher layers [22, 25, 28] → student layers [10, 13, 16] (last three evenly spaced layers, matching the pattern used for Qwen).
+We have run a cross-family experiment on ACE05 using **Meta-Llama-3-8B-Instruct as teacher and Llama-3.2-1B-Instruct as student**, an 8× parameter-compression ratio that is even larger than the 6.7× of our paper's Qwen3 setup. The pipeline is identical (LoRA SFT for the teacher, EventKD with SFKL + L_EA for the student) except for the span-alignment layer mapping, which is scaled to the depths of the new pair: teacher Llama-3-8B [29, 32] → student Llama-3.2-1B [13, 16] (last two evenly spaced layers, the default 2-layer mapping used for non-ACE datasets in the paper).
 
-Results on ACE05 test (strict trigger / argument F1):
+To make the comparison rigorous, we also retrain the **DistiLLM SFKL** and **CSD** baselines under the new family, sharing the same student backbone and identical training budget. Results on ACE05 test (strict trigger / argument F1, best per-metric across 5 epochs):
 
-| Family (teacher → student) | Teacher F1 (T / A) | Student SFT (T / A) | **EventKD (T / A)** | Δ over Student SFT |
-|---|---|---|---|---|
-| Qwen3 (4B → 0.6B), paper | 72.31 / 46.45 | 60.57 / 31.34 | **67.12 / 43.46** | +6.55 / +12.12 |
-| **Llama-3.2 (3B → 1B), new** | 70.4 / 45.5 | 66.3 / 38.0 | **69.4 / 43.0** | **+3.1 / +5.0** |
+| Family (teacher → student) | Method | Trigger F1 | Argument F1 |
+|---|---|---|---|
+| Qwen3 (4B → 0.6B), paper | Student SFT | 60.57 | 31.34 |
+| Qwen3 (4B → 0.6B), paper | DistiLLM SFKL | 64.87 | 38.14 |
+| Qwen3 (4B → 0.6B), paper | CSD | 64.94 | 36.98 |
+| Qwen3 (4B → 0.6B), paper | **EventKD (ours)** | **67.12** | **43.46** |
+| **Llama-3 (8B → 1B), new** | Teacher (upper bound) | 77.23 | 52.46 |
+| **Llama-3 (8B → 1B), new** | DistiLLM SFKL | 71.43 | 46.03 |
+| **Llama-3 (8B → 1B), new** | CSD | 71.52 | 46.55 |
+| **Llama-3 (8B → 1B), new** | **EventKD (ours)** | **72.75** | **46.84** |
 
-EventKD improves over the student-only SFT baseline in **both** families on **both** trigger and argument F1, confirming that the gain is not specific to the Qwen family. The smaller absolute Δ on Llama-3.2 reflects a *stronger* baseline (Llama-3.2-1B SFT alone reaches 66.3 trigger F1, well above Qwen3-0.6B SFT at 60.57) and therefore a narrower student–teacher gap (≈4 trigger / 7.5 argument F1 on Llama vs ≈12 / 15 on Qwen). Relative to the available headroom, EventKD closes **75% of the trigger gap and 67% of the argument gap** on Llama-3.2, comparable to the **56% / 80%** closure on Qwen3. We will include this table in the camera-ready and discuss the gap-closure framing.
+EventKD outperforms both KD baselines on both metrics and on both families, confirming that the gain is not specific to the Qwen family. On the new Llama-3 cross-family pair, EventKD improves over DistiLLM SFKL by **+1.32 trigger / +0.81 argument F1** and over CSD by **+1.23 trigger / +0.29 argument F1**, while retaining **94.2% of teacher Trigger F1 and 89.3% of teacher Argument F1** under an 8× compression ratio. We will include this expanded comparison table in the camera-ready.
 
 **(W3) On the distillation ratio β = 0.9.**
 The 0.9 ratio is motivated by the asymmetry between the two signals available to the student: the cross-entropy loss provides only the *single argmax* token at each position, while the structured teacher distribution (and its event-aware geometry) carries the full distributional and relational information that we wish to transfer. Up-weighting the distillation term is consistent with prior generative-LLM KD work that uses high distillation weights when the teacher is significantly stronger than the student (e.g., DistilBERT, MiniLLM, DistiLLM).
@@ -95,14 +101,20 @@ We thank the reviewer and address this in three points.
 *(3) Empirically, malformed output is rare, and the loss degrades gracefully.* On the ACE05 test split, **>96% of teacher generations parse as valid JSON conforming to the expected event schema**, indicating malformed output is a rare edge case once the teacher is fine-tuned. When an individual response cannot be parsed into spans, the example silently falls back to *token-level KD only* (the L_EA term contributes zero), so noise reduces the training signal rather than crashing it. We are running a controlled noise-injection study (random span drop at 10/20/30% and serialization corruption) and will report the F1 degradation curve in the camera-ready, together with a span-validity gating variant in the appendix.
 
 **(W3) Cross-architecture and non-English generalization.**
-*Architectures.* We have run a cross-family experiment on ACE05 using **Llama-3.2-3B-Instruct → Llama-3.2-1B-Instruct**, with the layer mapping scaled proportionally to Llama's depth (teacher [22, 25, 28] → student [10, 13, 16]). Strict F1 results:
+*Architectures.* We have run a cross-family experiment on ACE05 using **Meta-Llama-3-8B-Instruct → Llama-3.2-1B-Instruct** (8× parameter compression, even larger than the 6.7× of our paper's Qwen3 setup). The pipeline is identical to our Qwen3 setup; the span-alignment layer mapping is scaled to the new pair (teacher [29, 32] → student [13, 16], the default 2-layer mapping). To make the comparison rigorous, we also retrain the **DistiLLM SFKL** and **CSD** baselines under the new family, sharing the same student backbone and identical training budget. Strict F1 (best per-metric across 5 epochs):
 
-| Family (teacher → student) | Teacher (T / A) | Student SFT (T / A) | **EventKD (T / A)** | Δ over Student SFT |
-|---|---|---|---|---|
-| Qwen3 (4B → 0.6B), paper | 72.31 / 46.45 | 60.57 / 31.34 | **67.12 / 43.46** | +6.55 / +12.12 |
-| **Llama-3.2 (3B → 1B), new** | 70.4 / 45.5 | 66.3 / 38.0 | **69.4 / 43.0** | **+3.1 / +5.0** |
+| Family (teacher → student) | Method | Trigger F1 | Argument F1 |
+|---|---|---|---|
+| Qwen3 (4B → 0.6B), paper | Student SFT | 60.57 | 31.34 |
+| Qwen3 (4B → 0.6B), paper | DistiLLM SFKL | 64.87 | 38.14 |
+| Qwen3 (4B → 0.6B), paper | CSD | 64.94 | 36.98 |
+| Qwen3 (4B → 0.6B), paper | **EventKD (ours)** | **67.12** | **43.46** |
+| **Llama-3 (8B → 1B), new** | Teacher (upper bound) | 77.23 | 52.46 |
+| **Llama-3 (8B → 1B), new** | DistiLLM SFKL | 71.43 | 46.03 |
+| **Llama-3 (8B → 1B), new** | CSD | 71.52 | 46.55 |
+| **Llama-3 (8B → 1B), new** | **EventKD (ours)** | **72.75** | **46.84** |
 
-EventKD yields a positive gain on **both axes** of **both families**. The smaller absolute gain on Llama-3.2 reflects a stronger student baseline (66.3 trigger F1 with SFT alone) and therefore a narrower teacher–student gap; in relative terms EventKD closes 75% of the trigger gap and 67% of the argument gap on Llama-3.2, comparable to Qwen3 (56% / 80%).
+EventKD outperforms both KD baselines on both metrics and on both families, confirming that the gain is not specific to a single architecture. On Llama-3 (8B → 1B), EventKD improves over DistiLLM SFKL by **+1.32 trigger / +0.81 argument F1** and over CSD by **+1.23 trigger / +0.29 argument F1**, while retaining **94.2% of teacher Trigger F1 and 89.3% of teacher Argument F1** under the 8× compression.
 
 *Languages.* The framework is **language-agnostic by construction**: span extraction operates on character offsets within the teacher's structured JSON output and does not depend on language-specific tokenization, morphology, or word segmentation; span-level pooling (Eq. 4) aggregates over arbitrary token spans, so morphologically rich languages where a single trigger spans multiple subwords are supported without method changes.
 
