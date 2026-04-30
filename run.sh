@@ -24,7 +24,7 @@
 # bash scripts/qwen/sft/sft_llama_3B_ace.sh
 # bash scripts/qwen/distillm/ace/train_1B_3B_llama.sh
 # bash scripts/qwen/distillm/ace/train_1B_3B_llama_csd.sh
-bash scripts/qwen/span_distillm/ace/train_1B_3B_llama.sh
+# bash scripts/qwen/span_distillm/ace/train_1B_3B_llama.sh
 
 # # Sweep 5 ratio
 # for r in 0.1 0.3 0.5 0.7 1.0; do
@@ -54,4 +54,4 @@ bash scripts/qwen/span_distillm/ace/train_1B_3B_llama.sh
 
 # (e) DistiLLM SFKL baseline (Spanish) — for cross-method comparison vs EventKD
 bash scripts/qwen/distillm/minion/train_0.6B_4B_minion_spanish.sh
-bash scripts/qwen/ablation/ace/train_0.6B_4B_relation.sh
+# bash scripts/qwen/ablation/ace/train_0.6B_4B_relation.sh

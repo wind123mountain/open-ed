@@ -66,7 +66,7 @@ class LMTrainDataset(Dataset):
                     
                     values_to_find.append(event[3])  # 4. description
 
-                else:
+                elif len(event) > 2:
                     values_to_find.append(event[2])  # 3. description
 
             result_tuples = []
