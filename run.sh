@@ -11,6 +11,13 @@ bash scripts/qwen/sft/sft_llama_1B_ace.sh
 bash scripts/qwen/span_distillm/ace/train_1B_3B_llama.sh
 bash scripts/qwen/distillm/ace/train_1B_3B_llama.sh
 bash scripts/qwen/distillm/ace/train_1B_3B_llama_csd.sh
+
+# === Llama 1B/8B pipeline (mới — teacher Meta-Llama-3-8B-Instruct) ===
+# Reuse student SFT (sft_llama_1B_ace.sh) ở line trên — không cần chạy lại
+bash scripts/qwen/sft/sft_llama_8B_ace.sh
+bash scripts/qwen/span_distillm/ace/train_1B_8B_llama.sh
+bash scripts/qwen/distillm/ace/train_1B_8B_llama.sh
+bash scripts/qwen/distillm/ace/train_1B_8B_llama_csd.sh
 # bash scripts/qwen/tools/process_data_ace_gemma.sh
 # bash scripts/qwen/sft/sft_gemma_1B_ace.sh
 # bash scripts/qwen/sft/sft_gemma_4B_ace.sh

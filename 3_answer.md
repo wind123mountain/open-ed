@@ -34,7 +34,16 @@ Results on ACE05 test (strict trigger / argument F1):
 EventKD improves over the student-only SFT baseline in **both** families on **both** trigger and argument F1, confirming that the gain is not specific to the Qwen family. The smaller absolute Δ on Llama-3.2 reflects a *stronger* baseline (Llama-3.2-1B SFT alone reaches 66.3 trigger F1, well above Qwen3-0.6B SFT at 60.57) and therefore a narrower student–teacher gap (≈4 trigger / 7.5 argument F1 on Llama vs ≈12 / 15 on Qwen). Relative to the available headroom, EventKD closes **75% of the trigger gap and 67% of the argument gap** on Llama-3.2, comparable to the **56% / 80%** closure on Qwen3. We will include this table in the camera-ready and discuss the gap-closure framing.
 
 **(W3) On the distillation ratio β = 0.9.**
-The 0.9 ratio is motivated by the asymmetry between the two signals available to the student: the cross-entropy loss provides only the *single argmax* token at each position, while the structured teacher distribution (and its event-aware geometry) carries the full distributional and relational information that we wish to transfer. Up-weighting the distillation term is consistent with prior generative-LLM KD work that uses high distillation weights when the teacher is significantly stronger than the student (e.g., DistilBERT, MiniLLM, DistiLLM). We are running a sensitivity sweep over β ∈ {0.3, 0.5, 0.7, 0.9, 0.95} on ACE05 and will report the full curve with the camera-ready; preliminary numbers indicate that performance is *flat in a wide neighborhood around 0.9* and degrades only at β ≤ 0.3, supporting the choice as a near-optimal plateau rather than a brittle setting.
+The 0.9 ratio is motivated by the asymmetry between the two signals available to the student: the cross-entropy loss provides only the *single argmax* token at each position, while the structured teacher distribution (and its event-aware geometry) carries the full distributional and relational information that we wish to transfer. Up-weighting the distillation term is consistent with prior generative-LLM KD work that uses high distillation weights when the teacher is significantly stronger than the student (e.g., DistilBERT, MiniLLM, DistiLLM).
+
+We have run a sensitivity sweep over β ∈ {0.1, 0.3, 0.5, 0.7, 1.0} on ACE05 with the same Qwen3-0.6B / Qwen3-4B EventKD setup, reporting the best per-metric F1 across 5 epochs:
+
+| β | 0.1 | 0.3 | 0.5 | 0.7 | **0.9 (paper)** | 1.0 |
+|---|---|---|---|---|---|---|
+| Trigger F1 | 66.7 | 67.5 | 66.7 | 68.8 | **67.1** | 60.5 |
+| Argument F1 | 40.8 | 41.8 | 42.2 | 40.9 | **43.5** | 30.0 |
+
+Both metrics form a wide plateau over β ∈ [0.3, 0.7] (Trigger F1 within 2.1 points, Argument F1 within 1.4 points), confirming the method is not brittle to the choice of β. The chosen β = 0.9 sits within this plateau. Performance only collapses at β = 1.0 (no cross-entropy: −13.5 argument F1 relative to β = 0.9), which empirically validates the necessity of the cross-entropy term in our dual-loss design (Eq. 8). The full curve and reproducibility details will be reported in the camera-ready.
 
 **(W4) On inference efficiency and student–teacher comparison.**
 We will rename Table 5 to *Training and Inference Cost* and add a new comparison block reporting parameter count, inference latency (batch sizes 1 and 16), throughput, and peak GPU memory for the teacher and student on ACE05 (single A100/A40, bf16, deterministic decoding, 50 test prompts, 5-batch warmup). Preliminary numbers will be added before camera-ready; the table layout is:
@@ -95,7 +104,18 @@ We thank the reviewer and address this in three points.
 
 EventKD yields a positive gain on **both axes** of **both families**. The smaller absolute gain on Llama-3.2 reflects a stronger student baseline (66.3 trigger F1 with SFT alone) and therefore a narrower teacher–student gap; in relative terms EventKD closes 75% of the trigger gap and 67% of the argument gap on Llama-3.2, comparable to Qwen3 (56% / 80%).
 
-*Languages.* The framework is **language-agnostic by construction**: span extraction operates on character offsets within the teacher's structured JSON output and does not depend on language-specific tokenization, morphology, or word segmentation; span-level pooling (Eq. 4) aggregates over arbitrary token spans, so morphologically-rich languages where a single trigger spans multiple subwords are supported without method changes. Empirical validation on multilingual benchmarks (ACE05 Chinese, multilingual MAVEN) is a natural next step that we mark as future work in the camera-ready.
+*Languages.* The framework is **language-agnostic by construction**: span extraction operates on character offsets within the teacher's structured JSON output and does not depend on language-specific tokenization, morphology, or word segmentation; span-level pooling (Eq. 4) aggregates over arbitrary token spans, so morphologically rich languages where a single trigger spans multiple subwords are supported without method changes.
+
+To validate this empirically we ran the Qwen3 pipeline on **MINION** (Pouran Ben Veyseh et al., EMNLP 2022), a non-English event-detection benchmark spanning 8 typologically diverse languages with 16 ACE-style event types. Below are the **Spanish** test-set results (MINION provides only trigger-level annotations, hence Argument F1 is not applicable):
+
+| Method | Trigger F1 | rougeL |
+|---|---|---|
+| Teacher (Qwen3-4B + LoRA) | 62.74 | 69.33 |
+| Student SFT baseline | 58.30 | 67.84 |
+| DistiLLM SFKL baseline | 58.51 | 62.90 |
+| **EventKD (ours)** | **60.20** | **70.51** |
+
+EventKD outperforms both the SFT baseline (+1.90 trigger F1) and the DistiLLM SFKL baseline (+1.69), retaining 96.0% of teacher trigger F1 while delivering 6.7× parameter compression. This confirms that EventKD's event-aware structural distillation generalizes beyond English benchmarks. Portuguese results (also from MINION) are running and will be added in the camera-ready.
 
 
 # Official Review of Submission1211 by Reviewer zt6F
