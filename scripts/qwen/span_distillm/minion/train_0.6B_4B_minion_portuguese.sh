@@ -48,7 +48,7 @@ OPTS+=" --teacher-model-path ${TEACHER_CKPT}"
 OPTS+=" --ckpt-name ${CKPT_NAME}"
 OPTS+=" --teacher-ckpt-name ${TEACHER_CKPT_NAME}"
 OPTS+=" --teacher-model-fp16"
-OPTS+=" --teacher-peft-path results/qwen3/sft_4B_minion_portuguese/e3-bs2-lr0.0001-G8-N2-NN1-lora-32-64-0.1/114"
+OPTS+=" --teacher-peft-path results/qwen3/sft_4B_minion_portuguese/e3-bs2-lr0.0001-G8-N2-NN1-lora-32-64-0.1/111"
 OPTS+=" --model-type qwen"
 OPTS+=" --n-gpu ${GPUS_PER_NODE}"
 # data
