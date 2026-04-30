@@ -115,8 +115,8 @@ OPTS+=" --peft-lora-dropout 0.1"
 
 # Llama-3-8B teacher: 32 transformer layers (hidden_states idx 0..32)
 # Llama-3.2-1B student: 16 transformer layers (hidden_states idx 0..16)
-OPTS+=" --teacher_layer_mapping 26 29 32"
-OPTS+=" --student_layer_mapping 12 14 16"
+OPTS+=" --teacher_layer_mapping 29 32"
+OPTS+=" --student_layer_mapping 13 16"
 OPTS+=" --w-span-loss 2.0"
 
 
