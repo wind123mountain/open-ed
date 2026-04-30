@@ -18,6 +18,15 @@ class Encoder(object):
 
     def initializer(self):
         Encoder.tokenizer = AutoTokenizer.from_pretrained(self.args.model_path, padding_side="right")
+        # Gemma fix: default eos_token_id = 1 (<eos>) but chat template ends turns
+        # with <end_of_turn> (id 106). At training (utils.get_tokenizer) we override
+        # eos to <end_of_turn>; sync the data eos here so the model learns to stop
+        # at <end_of_turn>, matching the inference eos list.
+        if self.args.model_type == "gemma":
+            eot_id = Encoder.tokenizer.convert_tokens_to_ids("<end_of_turn>")
+            if eot_id is not None and eot_id != Encoder.tokenizer.unk_token_id:
+                Encoder.tokenizer.eos_token = "<end_of_turn>"
+                Encoder.tokenizer.eos_token_id = eot_id
 
     def encode(self, line):
         line = json.loads(line)
