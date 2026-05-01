@@ -1,0 +1,138 @@
+{
+  "teacher": {
+    "name": "Qwen3-4B + LoRA SFT",
+    "n_runs": 3,
+    "metrics": {
+      "params_B": {
+        "n": 3,
+        "median": 4.0225,
+        "mean": 4.0225,
+        "std": 0.0,
+        "min": 4.0225,
+        "max": 4.0225
+      },
+      "throughput_bs16_tokens_per_sec": {
+        "n": 3,
+        "median": 151.9,
+        "mean": 151.83333333333334,
+        "std": 0.6027713773341797,
+        "min": 151.2,
+        "max": 152.4
+      },
+      "throughput_bs16_samples_per_sec": {
+        "n": 3,
+        "median": 1.187,
+        "mean": 1.186,
+        "std": 0.004582575694955795,
+        "min": 1.181,
+        "max": 1.19
+      },
+      "peak_memory_bs16_gb": {
+        "n": 3,
+        "median": 9.254,
+        "mean": 9.253666666666666,
+        "std": 0.0005773502691893057,
+        "min": 9.253,
+        "max": 9.254
+      }
+    }
+  },
+  "student_eventkd": {
+    "name": "Qwen3-0.6B + EventKD (ours)",
+    "n_runs": 3,
+    "metrics": {
+      "params_B": {
+        "n": 3,
+        "median": 0.596,
+        "mean": 0.596,
+        "std": 0.0,
+        "min": 0.596,
+        "max": 0.596
+      },
+      "throughput_bs16_tokens_per_sec": {
+        "n": 3,
+        "median": 264.6,
+        "mean": 265.73333333333335,
+        "std": 4.215843134336623,
+        "min": 262.2,
+        "max": 270.4
+      },
+      "throughput_bs16_samples_per_sec": {
+        "n": 3,
+        "median": 2.067,
+        "mean": 2.076,
+        "std": 0.03342154993413676,
+        "min": 2.048,
+        "max": 2.113
+      },
+      "peak_memory_bs16_gb": {
+        "n": 3,
+        "median": 2.169,
+        "mean": 2.169,
+        "std": 0.0,
+        "min": 2.169,
+        "max": 2.169
+      }
+    }
+  },
+  "student_sft": {
+    "name": "Qwen3-0.6B + SFT baseline",
+    "n_runs": 3,
+    "metrics": {
+      "params_B": {
+        "n": 3,
+        "median": 0.596,
+        "mean": 0.596,
+        "std": 0.0,
+        "min": 0.596,
+        "max": 0.596
+      },
+      "throughput_bs16_tokens_per_sec": {
+        "n": 3,
+        "median": 267.0,
+        "mean": 266.9,
+        "std": 3.3511192160232026,
+        "min": 263.5,
+        "max": 270.2
+      },
+      "throughput_bs16_samples_per_sec": {
+        "n": 3,
+        "median": 2.086,
+        "mean": 2.0853333333333333,
+        "std": 0.026006409466386056,
+        "min": 2.059,
+        "max": 2.111
+      },
+      "peak_memory_bs16_gb": {
+        "n": 3,
+        "median": 2.169,
+        "mean": 2.1686666666666667,
+        "std": 0.0005773502691895622,
+        "min": 2.168,
+        "max": 2.169
+      }
+    }
+  },
+  "_metrics_schema": [
+    [
+      "params_B",
+      "Params (B)",
+      "{:.3f}"
+    ],
+    [
+      "throughput_bs16_tokens_per_sec",
+      "Tokens/s bs=16",
+      "{:.1f}"
+    ],
+    [
+      "throughput_bs16_samples_per_sec",
+      "Samples/s bs=16",
+      "{:.3f}"
+    ],
+    [
+      "peak_memory_bs16_gb",
+      "Peak mem bs=16 (GB)",
+      "{:.2f}"
+    ]
+  ]
+}
