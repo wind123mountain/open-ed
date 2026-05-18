@@ -149,6 +149,16 @@ def add_hp_args(parser: argparse.ArgumentParser):
 
     group.add_argument("--w-span-loss", type=float, default=1.0)
 
+    # AMiD (arxiv 2510.15982)
+    group.add_argument("--amid-alpha", type=float, default=0.5,
+                       help="AMiD alpha-mixture power. >=1.0 uses log-mixture; <1.0 uses alpha-power mixture.")
+    group.add_argument("--amid-lam", type=float, default=0.1,
+                       help="AMiD interpolation weight between teacher (lam=1) and student (lam=0).")
+    group.add_argument("--amid-div-name", type=str, default="fkl", choices=["fkl", "ab"],
+                       help="AMiD divergence family: 'fkl' for forward-KL-like, 'ab' for alpha-beta divergence.")
+    group.add_argument("--amid-div-order", type=str, default="rq", choices=["pr", "qr", "rp", "rq"],
+                       help="AMiD divergence direction; r=assistant, p=teacher, q=student.")
+
     return parser
 
 
