@@ -26,7 +26,7 @@ DATA_DIR="${BASE_PATH}/processed_data/ace/qwen/"
 # hp
 BATCH_SIZE=2
 LR=0.0001
-GRAD_ACC=1
+GRAD_ACC=8
 EVAL_BATCH_SIZE=32
 EPOCHS=5
 # length
