@@ -18,7 +18,7 @@ DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE \
 # model
 BASE_PATH=.
 CKPT_NAME="llama3.2-1B"
-CKPT="meta-llama/Llama-3.2-1B"
+CKPT="meta-llama/Llama-3.2-1B-Instruct"
 # data
 DATA_DIR="${BASE_PATH}/processed_data/maven/llama/"
 # hp
