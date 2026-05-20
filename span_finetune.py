@@ -190,6 +190,8 @@ def get_distil_loss(args, teacher_logits, no_model_batch, logits):
             distil_loss = reverse_kl(logits, teacher_logits, no_model_batch)
         elif "csd" in args.type:
             distil_loss = csd(logits, teacher_logits, no_model_batch)
+        elif "no" in args.type:
+            distil_loss = 0.0
         else:
             raise NotImplementedError
     return distil_loss
