@@ -46,7 +46,7 @@ def extract_arguments(data):
     except:
         pass
 
-    return list(set(args))
+    return list(set([]))
 
 def update_counts(pred_items, gt_items, counts):
     pred_counter = Counter(pred_items)
