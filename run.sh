@@ -1,4 +1,4 @@
-# === Download teacher PEFT từ HuggingFace nếu chưa có ===
+# === Download teacher PEFT từ HuggingFace nếu chưa có (cho Qwen GENEVA AMiD) ===
 download_teacher() {
     local DEST="$1"
     local URL="$2"
@@ -13,18 +13,13 @@ download_teacher() {
 }
 
 download_teacher \
-    "results/qwen3/sft_4B_ace/e5-bs2-lr0.0001-G8-N2-NN1-lora-32-64-0.05/490" \
-    "https://huggingface.co/VoCuc/open-ed-ckpt/resolve/main/qwen3/sft_4B_ace/e5-bs2-lr0.0001-G8-N2-NN1-lora-32-64-0.05/490"
-
-download_teacher \
     "results/qwen3/sft_4B_geneva/e5-bs2-lr0.0003-G8-N2-NN1-lora-64-128-0.05/305" \
     "https://huggingface.co/VoCuc/open-ed-ckpt/resolve/main/qwen3/sft_4B_geneva/e5-bs2-lr0.0003-G8-N2-NN1-lora-64-128-0.05/305"
 
 # === AMiD baseline (Llama 1B/8B) trên ACE — chưa chạy ===
 bash scripts/qwen/distillm/ace/train_1B_8B_llama_amid.sh
 
-# === AMiD baseline (Qwen 0.6B/4B) — ACE và GENEVA stuck từ run trước, cần retry ===
-bash scripts/qwen/distillm/ace/train_0.6B_4B_amid.sh
+# === AMiD baseline (Qwen 0.6B/4B) GENEVA — retry sau khi đã có teacher PEFT ===
 bash scripts/qwen/distillm/geneva/train_0.6B_4B_amid.sh
 
 # === EventKD GENEVA (Llama) với kd-ratio=0.7 — tune lại để vượt DistiLLM SFKL ===
