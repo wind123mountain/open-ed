@@ -42,6 +42,7 @@ def extract_arguments(data):
                 arg_text = arg[0]
                 role = normalize(arg[1])
                 args.append((trigger, e_type, arg_text, role))
+        return list(set(args))
     except:
         pass
 
