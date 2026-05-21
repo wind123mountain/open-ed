@@ -17,20 +17,11 @@ download_teacher() {
     fi
 }
 
-# Llama 8B ACE teacher (step 788 = best epoch, Trig 77.23 / Arg 52.46)
+# Llama 8B GENEVA teacher — đầy đủ steps để auto-resolve pick last (2460) như run gốc đã work tốt
 download_teacher \
-    "results/llama/sft_8B_ace/e5-bs2-lr0.0001-G1-N8-NN1-lora-32-64-0.1/788" \
-    "https://huggingface.co/VoCuc/eventkd-rebuttal/resolve/main/llama/sft_8B_ace/e5-bs2-lr0.0001-G1-N8-NN1-lora-32-64-0.1/788"
+    "results/llama/sft_8B_geneva/e5-bs2-lr0.0001-G1-N2-NN1-lora-32-64-0.1/2460" \
+    "https://huggingface.co/VoCuc/open-ed-ckpt-v2/resolve/main/llama/sft_8B_geneva/e5-bs2-lr0.0001-G1-N2-NN1-lora-32-64-0.1/2460"
 
-# Llama 8B GENEVA teacher (step 1968 = best epoch trigger, Trig 70.60 / Arg 46.93)
-download_teacher \
-    "results/llama/sft_8B_geneva/e5-bs2-lr0.0001-G1-N2-NN1-lora-32-64-0.1/1968" \
-    "https://huggingface.co/VoCuc/open-ed-ckpt-v2/resolve/main/llama/sft_8B_geneva/e5-bs2-lr0.0001-G1-N2-NN1-lora-32-64-0.1/1968"
-
-# === AMiD baseline (Llama 1B/8B) trên ACE — dùng best teacher step 788 ===
-TEACHER_PEFT_PATH="results/llama/sft_8B_ace/e5-bs2-lr0.0001-G1-N8-NN1-lora-32-64-0.1/788" \
-    bash scripts/qwen/distillm/ace/train_1B_8B_llama_amid.sh
-
-# === EventKD GENEVA (Llama) rerun với best teacher step 1968 + kd-ratio=0.9 ===
-TEACHER_PEFT_PATH="results/llama/sft_8B_geneva/e5-bs2-lr0.0001-G1-N2-NN1-lora-32-64-0.1/1968" \
-    bash scripts/qwen/span_distillm/geneva/train_1B_8B_llama.sh
+# === EventKD GENEVA (Llama) rerun với LR=1e-4 (giảm từ 2e-4) ===
+# kd-ratio=0.9, teacher auto-resolve (step 2460), layer/lora/epochs giữ nguyên
+bash scripts/qwen/span_distillm/geneva/train_1B_8B_llama.sh
