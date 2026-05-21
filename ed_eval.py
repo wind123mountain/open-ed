@@ -42,10 +42,11 @@ def extract_arguments(data):
                 arg_text = arg[0]
                 role = normalize(arg[1])
                 args.append((trigger, e_type, arg_text, role))
+        return list(set(args))
     except:
         pass
 
-    return list(set(args))
+    return list(set([]))
 
 def update_counts(pred_items, gt_items, counts):
     pred_counter = Counter(pred_items)
