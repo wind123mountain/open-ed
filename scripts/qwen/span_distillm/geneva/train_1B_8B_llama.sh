@@ -31,8 +31,13 @@ EVAL_BATCH_SIZE=64
 EPOCHS=5
 # length
 MAX_LENGTH=768
+# Tunable hyperparameters (override via env: KD_RATIO=... W_SPAN=... bash <script>)
+KD_RATIO=${KD_RATIO:-0.9}
+W_SPAN=${W_SPAN:-2.0}
+TAG=${TAG:-kd${KD_RATIO}-w${W_SPAN}}
+
 # runtime
-SAVE_PATH="${BASE_PATH}/results/llama/span_distillm/1B_8B_geneva_srkl"
+SAVE_PATH="${BASE_PATH}/results/llama/span_distillm/1B_8B_geneva_srkl_${TAG}"
 # seed
 SEED=42
 
@@ -74,7 +79,7 @@ OPTS+=" --lr-decay-style cosine"
 OPTS+=" --weight-decay 1e-2"
 OPTS+=" --clip-grad 1.0"
 OPTS+=" --epochs ${EPOCHS}"
-OPTS+=" --kd-ratio 0.9"
+OPTS+=" --kd-ratio ${KD_RATIO}"
 # length
 OPTS+=" --max-length ${MAX_LENGTH}"
 OPTS+=" --max-prompt-length 460"
@@ -116,7 +121,7 @@ OPTS+=" --peft-lora-dropout 0.1"
 # Llama-3.2-1B student: 16 transformer layers (hidden_states idx 0..16)
 OPTS+=" --teacher_layer_mapping 29 32"
 OPTS+=" --student_layer_mapping 13 16"
-OPTS+=" --w-span-loss 2.0"
+OPTS+=" --w-span-loss ${W_SPAN}"
 
 
 export NCCL_DEBUG=""
