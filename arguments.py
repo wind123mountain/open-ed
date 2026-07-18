@@ -202,6 +202,8 @@ def add_distillm_args(parser: argparse.ArgumentParser):
     group.add_argument("--student_layer_mapping", nargs='+', type=int, default=[-1])
     group.add_argument("--teacher_layer_mapping", nargs='+', type=int, default=[-1])
     group.add_argument("--split_layer_mapping", nargs='+', type=int, default=[0, 0, 0, 0])
+    group.add_argument("--span_metric", type=str, default="cosine", choices=["cosine", "dot", "l2"],
+                       help="span relational distance: cosine | dot | l2(euclidean)")
     group.add_argument("--use_dsa", action="store_true")
     group.add_argument("--use_hs", action="store_true")
 

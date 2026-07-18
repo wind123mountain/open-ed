@@ -36,7 +36,7 @@ def main():
             model_path=args.model_path,
             distilled_lora=args.lora_path,
             device=args.student_device,
-            seeds=[42]
+            seeds=[args.seed]
         )
     else:
         evaluator = Evaluator(
@@ -44,7 +44,7 @@ def main():
             model_type=args.model_type,
             model_path=args.model_path,
             device=args.student_device,
-            seeds=[42]
+            seeds=[args.seed]
         )
     
     evaluator.model.config.output_hidden_states=False
@@ -68,20 +68,20 @@ def main():
         for resp in responses:
             f.write(json.dumps({"text": resp}) + "\n")
 
-    with torch.cuda.amp.autocast(dtype=dtype):
-        metrics, responses = evaluator.evaluate_benchmark_dataset(
-            data_dir=args.data_dir,
-            dataset_name=args.dataset_name,            
-            batch_size=args.val_batch_size, 
-            max_length=1024, max_prompt_length=512, split="valid"
-        )
+    # with torch.cuda.amp.autocast(dtype=dtype):
+    #     metrics, responses = evaluator.evaluate_benchmark_dataset(
+    #         data_dir=args.data_dir,
+    #         dataset_name=args.dataset_name,            
+    #         batch_size=args.val_batch_size, 
+    #         max_length=1024, max_prompt_length=512, split="valid"
+    #     )
 
-    with open(args.output_dir + f"/{args.dataset_name}_valid_eval.json", "w", encoding="utf-8") as f:
-        json.dump(metrics, f, ensure_ascii=False, indent=4)
+    # with open(args.output_dir + f"/{args.dataset_name}_valid_eval.json", "w", encoding="utf-8") as f:
+    #     json.dump(metrics, f, ensure_ascii=False, indent=4)
     
-    with open(args.output_dir + f"/{args.dataset_name}_valid_answers.jsonl", "w") as f:
-        for resp in responses:
-            f.write(json.dumps({"text": resp}) + "\n")
+    # with open(args.output_dir + f"/{args.dataset_name}_valid_answers.jsonl", "w") as f:
+    #     for resp in responses:
+    #         f.write(json.dumps({"text": resp}) + "\n")
     
 
 if __name__ == "__main__":

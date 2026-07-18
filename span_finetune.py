@@ -340,7 +340,7 @@ def prepare_span_indices_and_weights(t_layer_weights, s_layer_weights,
     return All_Indices, T_Token_Weights_all, S_Token_Weights_all, Span_IDs, Max_Spans, Batch_ID_for_Spans
 
 def get_span_loss(attention_mask, s_hidden_states, t_hidden_states, 
-                  offsets_mapping, spans_offsets, teacher_layer_mapping, student_layer_mapping):
+                  offsets_mapping, spans_offsets, teacher_layer_mapping, student_layer_mapping, metric="cosine"):
     
     t_layer_weights = []
     s_layer_weights = []
@@ -366,7 +366,7 @@ def get_span_loss(attention_mask, s_hidden_states, t_hidden_states,
         t_hidden = t_hidden_states[t_idx]
         span_loss = compute_hidden_span_loss(s_hidden, t_hidden, All_Indices,
                                              S_Token_Weights_all[i], T_Token_Weights_all[i], 
-                                             Span_IDs, Max_Spans, Batch_ID_for_Spans)
+                                             Span_IDs, Max_Spans, Batch_ID_for_Spans, metric=metric)
         final_loss += span_loss
 
     return final_loss
@@ -377,13 +377,13 @@ def compute_overall_span_loss(attention_mask, s_hidden_states, t_hidden_states,
     s_span_mapping = args.student_layer_mapping
     t_span_mapping = args.teacher_layer_mapping
     span_loss = get_span_loss(attention_mask, s_hidden_states, t_hidden_states, 
-                              offsets_mapping, spans_offsets, t_span_mapping, s_span_mapping)
+                              offsets_mapping, spans_offsets, t_span_mapping, s_span_mapping, metric=args.span_metric)
     
     overall_loss = span_loss / len(args.student_layer_mapping)
     return overall_loss
 
 def compute_hidden_span_loss(s_hidden_state, t_hidden_state, All_Indices, 
-                             S_Token_Weights_all, T_Token_Weights_all, Span_IDs, Max_Spans, Batch_ID_for_Spans):
+                             S_Token_Weights_all, T_Token_Weights_all, Span_IDs, Max_Spans, Batch_ID_for_Spans, metric="cosine"):
     D_hidden_s = s_hidden_state.size(-1)
     D_hidden_t = t_hidden_state.size(-1)
     device = t_hidden_state.device
@@ -421,10 +421,20 @@ def compute_hidden_span_loss(s_hidden_state, t_hidden_state, All_Indices,
     T_span_hidden_mean = T_span_sum / T_Weight_sum 
     S_span_hidden_mean = S_span_sum / S_Weight_sum
 
-    S_normalized = F.normalize(S_span_hidden_mean, p=2, dim=-1)
-    T_normalized = F.normalize(T_span_hidden_mean, p=2, dim=-1)
-    S_Full_Sim_Matrix = S_normalized @ S_normalized.T
-    T_Full_Sim_Matrix = T_normalized @ T_normalized.T
+    if metric == "cosine":
+        S_normalized = F.normalize(S_span_hidden_mean, p=2, dim=-1)
+        T_normalized = F.normalize(T_span_hidden_mean, p=2, dim=-1)
+        S_Full_Sim_Matrix = S_normalized @ S_normalized.T
+        T_Full_Sim_Matrix = T_normalized @ T_normalized.T
+    elif metric == "dot":
+        S_Full_Sim_Matrix = S_span_hidden_mean @ S_span_hidden_mean.T
+        T_Full_Sim_Matrix = T_span_hidden_mean @ T_span_hidden_mean.T
+    elif metric == "l2":
+        S_Full_Sim_Matrix = torch.cdist(S_span_hidden_mean, S_span_hidden_mean, p=2)
+        T_Full_Sim_Matrix = torch.cdist(T_span_hidden_mean, T_span_hidden_mean, p=2)
+
+    else:
+        raise ValueError(f"unknown span_metric: {metric}")
 
     Batch_IDs_col = Batch_ID_for_Spans.unsqueeze(1)
     Batch_IDs_row = Batch_ID_for_Spans.unsqueeze(0)

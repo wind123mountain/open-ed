@@ -59,7 +59,7 @@ class Evaluator:
         generation_config = GenerationConfig(
             do_sample=True,
             top_p=0.95,
-            temperature=0.7,            
+            temperature=0.5,            
             max_length=max_length,
             min_length=None,
             eos_token_id=self.tokenizer.eos_token_id,
