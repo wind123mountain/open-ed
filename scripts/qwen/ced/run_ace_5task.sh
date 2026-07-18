@@ -98,17 +98,18 @@ do
     ${ENV_BIN}/torchrun ${DISTRIBUTED_ARGS} ${BASE_PATH}/finetune.py ${OPTS} \
         > ${SAVE_PATH}/train.log 2>&1
 
-    # adapter checkpoints are saved under ${SAVE_PATH}/<global_step>/ each epoch; take the last
-    LAST_CKPT=$(ls ${SAVE_PATH} | grep -E "^[0-9]+$" | sort -n | tail -1)
+    # the trainer appends a hyperparameter suffix to --save; adapter checkpoints
+    # land at ${SAVE_PATH}/<hp-suffix>/<global_step>/ each epoch; take the last
+    LAST_CKPT=$(find ${SAVE_PATH} -maxdepth 2 -type d -regextype posix-extended -regex ".*/[0-9]+" | sort -V | tail -1)
     if [ -z "${LAST_CKPT}" ]; then
-        echo "no adapter checkpoint found in ${SAVE_PATH}, aborting"
+        echo "no adapter checkpoint found under ${SAVE_PATH}, aborting"
         exit 1
     fi
 
     echo "===== perm${PERM} task${T}: merging adapter ${LAST_CKPT} ====="
     ${ENV_BIN}/python ${BASE_PATH}/tools/merge_lora.py \
         --base-model-path ${INIT_MODEL} \
-        --peft-path ${SAVE_PATH}/${LAST_CKPT} \
+        --peft-path ${LAST_CKPT} \
         --out ${SAVE_PATH}/merged \
         > ${SAVE_PATH}/merge.log 2>&1
 
